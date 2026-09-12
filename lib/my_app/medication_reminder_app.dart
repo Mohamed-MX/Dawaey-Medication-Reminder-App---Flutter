@@ -1,4 +1,5 @@
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
+import 'package:dawaey/Fetures/medications/screens/add_medication_screen.dart';
 import 'package:flutter/material.dart';
 class MedicationReminderApp extends StatelessWidget {
   const MedicationReminderApp({super.key});
@@ -14,13 +15,12 @@ class MedicationReminderApp extends StatelessWidget {
       },
       debugShowCheckedModeBanner: false,
 // mohamed medhat 
-     home: MedicationDetailsScreen(),
+     home: AddMedicationScreen(),
 //dev two
 //home: RootPage(),
     theme:  ThemeData(
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'NotoSansArabic',
-        textTheme: TextTheme()
       ),
     );
   }

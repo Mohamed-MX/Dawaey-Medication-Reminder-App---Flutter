@@ -32,9 +32,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+    return  Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -89,7 +87,6 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             _buildFooter(),
           ],
         ),
-      ),
     );
   }
 

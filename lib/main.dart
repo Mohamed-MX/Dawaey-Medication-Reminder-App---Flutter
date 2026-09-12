@@ -1,3 +1,5 @@
+import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
+import 'package:dawaey/my_app/medication_reminder_app.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,16 +14,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Load environment variables before anything else
-  await dotenv.load(fileName: ".env");
-
-  await Firebase.initializeApp(
+  //await dotenv.load(fileName: ".env");
+  
+/**
+ *   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  runApp(const MyApp());
+ */
+runApp(const MedicationReminderApp());
+  
 }
 
-class MyApp extends StatelessWidget {
+/**
+ * class MyApp extends StatelessWidget {
 
   const MyApp({super.key});
 
@@ -51,6 +56,8 @@ class MyApp extends StatelessWidget {
 
 }
 
+
+ */
 class RootPage extends StatelessWidget {
 
   const RootPage({super.key});
