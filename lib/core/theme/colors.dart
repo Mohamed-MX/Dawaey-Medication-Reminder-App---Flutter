@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
+abstract final class AppColors {
   static const Color primary = Colors.teal;
   static const Color primaryLight = Color(0xFFE0F2F1); // teal.shade50
   
@@ -13,4 +13,10 @@ class AppColors {
 
   static const Color background = Colors.white;
   static const Color surface = Colors.white;
+
+  static const Color tealGreen = Color(0xff169B64);
+  static const Color lightBlue = Color(0xffEEF5FB);
+  static const Color softMintGreen = Color(0xffE3F4EC);
+  static const Color blackBlue = Color(0xff284A63);
+  static const Color BlueGray = Color(0xff6F8595);
 }
