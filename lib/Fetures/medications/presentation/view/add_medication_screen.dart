@@ -1,3 +1,4 @@
+import 'package:dawaey/Fetures/medications/widgets/calender.dart';
 import 'package:flutter/material.dart';
 
 class AddMedicationScreen extends StatefulWidget {
@@ -11,7 +12,15 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
+  DateTime? startSelectedDate ;
+  DateTime? endSelectedDate ;
+  List<TimeOfDay?> selectedTimes = List.filled(3, null);
+    double rs(BuildContext context, double value) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final scale = (screenWidth / 382).clamp(0.9, 1.2);
 
+    return value * scale;
+  }
   void _nextPage() {
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
@@ -441,11 +450,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             child: const Text('اختر مواعيد التناول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           ),
           const SizedBox(height: 16),
-          _buildTimeOption('08:00'),
+          _buildTimeOption('08:00' , 0),
           const SizedBox(height: 12),
-          _buildTimeOption('14:00'),
+          _buildTimeOption('14:00' , 1),
           const SizedBox(height: 12),
-          _buildTimeOption('20:00'),
+          _buildTimeOption('20:00' , 2),
           const SizedBox(height: 24),
           Container(
             width: double.infinity,
@@ -469,7 +478,8 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     );
   }
 
-  Widget _buildTimeOption(String time) {
+  Widget _buildTimeOption(String time , int index) {
+    final time = selectedTimes[index];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
@@ -479,8 +489,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(time, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-          const Icon(Icons.delete_outline, color: Colors.red),
+         selectedTimes[index] == null ? Text("بالرجاء تحديد موعد", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))) :  Text("${time!.hour % 12 == 0 ? 12 : time!.hour % 12}:${time!.minute}${time!.hour > 12 ?  'مساء ' : "صباحا "}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+         IconButton( onPressed:()async{
+        TimeOfDay? selectedTime = await showTimePicker(
+       context: context,
+       initialTime: TimeOfDay.now(),
+          );
+          if(selectedTime != null){
+          setState(() {
+            selectedTimes[index] = selectedTime;
+          });
+          }
+         },icon : Icon(Icons.access_time), color: Colors.red),
         ],
       ),
     );
@@ -500,9 +520,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             child: Icon(Icons.calendar_today, size: 50, color: const Color(0xFF106A8E)),
           ),
           const SizedBox(height: 32),
-          _buildInputField('تاريخ البداية', '2025/09/05', icon: Icons.calendar_today),
+          _buildDateField('تاريخ البداية', 'start', icon: Icons.calendar_today),
           const SizedBox(height: 16),
-          _buildInputField('تاريخ الانتهاء (اختياري)', 'اختر التاريخ', icon: Icons.calendar_today),
+          _buildDateField('تاريخ الانتهاء (اختياري)' , 'end' , icon: Icons.calendar_today),
           const SizedBox(height: 16),
           _buildInputField('عدد الجرعات المتبقية (اختياري)', 'مثال: 30'),
         ],
@@ -510,6 +530,51 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     );
   }
 
+    Widget _buildDateField(String label,  String type, {IconData? icon}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+        const SizedBox(height: 8),
+        TextField(
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: type == "start" ? (startSelectedDate == null ? 'برجاء اختيار التاريخ من التقويم' : '${startSelectedDate!.year} / ${startSelectedDate!.month} / ${startSelectedDate!.day}'): (endSelectedDate == null ? 'برجاء اختيار التاريخ من التقويم' : '${endSelectedDate!.year} / ${endSelectedDate!.month} / ${endSelectedDate!.day}'),
+            prefixIcon: icon != null ? IconButton( onPressed: () async{
+                 final selectedDatev =  await showDialog<DateTime>(
+                  context: context,
+                   builder: (context){
+                    DateTime? selected ;
+                        return AlertDialog(
+                          content: SingleChildScrollView(
+                            child: SizedBox(
+                              width: rs(context, 350),
+                              child: CalenderFeature( beforeDate: startSelectedDate , onSelected: (value) {
+                                selected = value;
+                              } ,),
+                              
+                            ),
+                          ),
+                          actions: [
+                            ElevatedButton(onPressed: (){
+                              Navigator.pop(context , selected );
+                            }, child: Text("تأكيد"))
+                          ],
+                        );
+                   });
+                   setState(() {
+                    
+                    type == 'start' ? startSelectedDate =  selectedDatev : endSelectedDate = selectedDatev ;
+                   });
+            } , icon: Icon(icon), color: Colors.grey) : null,
+
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+          ),
+        ),
+      ],
+    );
+  }
   Widget _buildInputField(String label, String hint, {IconData? icon}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

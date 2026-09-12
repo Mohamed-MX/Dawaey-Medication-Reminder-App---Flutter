@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../medications/screens/add_medication_screen.dart';
+import '../../medications/presentation/view/add_medication_screen.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});

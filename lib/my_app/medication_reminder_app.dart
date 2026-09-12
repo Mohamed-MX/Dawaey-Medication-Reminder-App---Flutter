@@ -1,6 +1,7 @@
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
-import 'package:dawaey/Fetures/medications/screens/add_medication_screen.dart';
+import '../Fetures/medications/presentation/view/add_medication_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 class MedicationReminderApp extends StatelessWidget {
   const MedicationReminderApp({super.key});
 
@@ -14,6 +15,19 @@ class MedicationReminderApp extends StatelessWidget {
     );
       },
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'EG'),
+
+      supportedLocales: const [
+        Locale('ar', 'EG'),
+        Locale('en', 'US'),
+      ],
+
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
 // mohamed medhat 
      home: AddMedicationScreen(),
 //dev two
