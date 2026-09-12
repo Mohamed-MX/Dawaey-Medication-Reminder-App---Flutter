@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../medications/screens/add_medication_screen.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -41,7 +42,12 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
         body: _buildBody(),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            // TODO: FAB action
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddMedicationScreen(),
+              ),
+            );
           },
           backgroundColor: Colors.teal,
           shape: const CircleBorder(),
