@@ -1,3 +1,6 @@
+import 'package:dawaey/Fetures/medications/presentation/view/add_medication_screen.dart';
+import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
+
 import '../Fetures/home/screens/home_caretaker_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -15,6 +18,9 @@ class MedicationReminderApp extends StatelessWidget {
             child: child!),
     );
       },
+      routes: {
+        '/add_medications' :(context) => AddMedicationScreen(),
+      }, 
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'EG'),
 
@@ -30,7 +36,7 @@ class MedicationReminderApp extends StatelessWidget {
       ],
 
 // mohamed medhat 
-     home: const home_caretaker_screen(),
+     home: const MedicationDetailsScreen(),
 //dev two
 //home: RootPage(),
     theme:  ThemeData(

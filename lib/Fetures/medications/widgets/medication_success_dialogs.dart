@@ -9,55 +9,57 @@ void showDeleteSuccessDialog(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: rs(context, 56),
-              height: rs(context, 56),
-              padding: EdgeInsets.all(
-                rs(context, 8),
-              ),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(
-                  181,
-                  244,
-                  212,
-                  184,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: rs(context, 56),
+                height: rs(context, 56),
+                padding: EdgeInsets.all(
+                  rs(context, 8),
                 ),
-                borderRadius: BorderRadius.circular(999),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(
+                    181,
+                    244,
+                    212,
+                    184,
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Icon(
+                  Icons.delete,
+                  size: rs(context, 30),
+                  color: const Color(0xffEF4444),
+                ),
               ),
-              child: Icon(
-                Icons.delete,
-                size: rs(context, 30),
-                color: const Color(0xffEF4444),
+          
+              SizedBox(
+                height: rs(context, 12),
               ),
-            ),
-
-            SizedBox(
-              height: rs(context, 12),
-            ),
-
-            Text(
-              'تم حذف الدواء',
-              textAlign: TextAlign.center,
-              style: AppFonts.inter30BoldDark.copyWith(
-                fontSize: rs(context, 24),
+          
+              Text(
+                'تم حذف الدواء',
+                textAlign: TextAlign.center,
+                style: AppFonts.inter30BoldDark.copyWith(
+                  fontSize: rs(context, 24),
+                ),
               ),
-            ),
-
-            SizedBox(
-              height: rs(context, 6),
-            ),
-
-            Text(
-              'تم حذف أملوديبين من قائمتك',
-              textAlign: TextAlign.center,
-              style: AppFonts.inter18BoldRed.copyWith(
-                fontSize: rs(context, 18),
+          
+              SizedBox(
+                height: rs(context, 6),
               ),
-            ),
-          ],
+          
+              Text(
+                'تم حذف أملوديبين من قائمتك',
+                textAlign: TextAlign.center,
+                style: AppFonts.inter18BoldRed.copyWith(
+                  fontSize: rs(context, 18),
+                ),
+              ),
+            ],
+          ),
         ),
 
         actions: [
@@ -101,6 +103,7 @@ void showDeleteSuccessDialog(
 }
 
 void showPauseSuccessDialog(
+
   BuildContext context,
   double Function(BuildContext, double) rs,
   String duration,
@@ -115,50 +118,52 @@ void showPauseSuccessDialog(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: rs(context, 56),
-              height: rs(context, 56),
-              padding: EdgeInsets.all(
-                rs(context, 8),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: rs(context, 56),
+                height: rs(context, 56),
+                padding: EdgeInsets.all(
+                  rs(context, 8),
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD4E2F3),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Icon(
+                  Icons.pause,
+                  size: rs(context, 30),
+                  color: const Color(0xFF8FA6C3),
+                ),
               ),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD4E2F3),
-                borderRadius: BorderRadius.circular(999),
+          
+              SizedBox(
+                height: rs(context, 12),
               ),
-              child: Icon(
-                Icons.pause,
-                size: rs(context, 30),
-                color: const Color(0xFF8FA6C3),
+          
+              Text(
+                'تم إيقاف الدواء مؤقتا',
+                textAlign: TextAlign.center,
+                style: AppFonts.inter30BoldDark.copyWith(
+                  fontSize: rs(context, 24),
+                ),
               ),
-            ),
-
-            SizedBox(
-              height: rs(context, 12),
-            ),
-
-            Text(
-              'تم إيقاف الدواء مؤقتا',
-              textAlign: TextAlign.center,
-              style: AppFonts.inter30BoldDark.copyWith(
-                fontSize: rs(context, 24),
+          
+              SizedBox(
+                height: rs(context, 6),
               ),
-            ),
-
-            SizedBox(
-              height: rs(context, 6),
-            ),
-
-            Text(
-              'سيتم إيقاف التنبيهات لمدة $durationText',
-              textAlign: TextAlign.center,
-              style: AppFonts.inter18BoldRed.copyWith(
-                fontSize: rs(context, 18),
+          
+              Text(
+                'سيتم إيقاف التنبيهات لمدة $durationText',
+                textAlign: TextAlign.center,
+                style: AppFonts.inter18BoldRed.copyWith(
+                  fontSize: rs(context, 18),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         actions: [

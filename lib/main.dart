@@ -1,3 +1,4 @@
+import 'package:dawaey/my_app/medication_reminder_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -36,41 +37,11 @@ void main() async {
   runApp(
     BlocProvider(
       create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
-      child: const MyApp(),
+      child: MedicationReminderApp(),
     ),
   );
 }
 
-
-class MyApp extends StatelessWidget {
-
-  const MyApp({super.key});
-
-  @override
-
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return Container(
-          color: Colors.white,
-          child: SafeArea(
-            top: false,
-            child: child!),
-        );
-      },
-// mohamed medhat 
-      home: const home_caretaker_screen(),
-
-//dev two
-
-//home: RootPage(),
-
-    );
-
-  }
-
-}
 
 
 
@@ -100,4 +71,4 @@ class RootPage extends StatelessWidget {
 
   }
 
-}
+}

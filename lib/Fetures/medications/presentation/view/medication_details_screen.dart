@@ -23,6 +23,43 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
     {'label': 'الوصفة الطبية', 'value': '90 جرعة'},
     {'label': 'ملاحظات', 'value': 'يؤخذ بعد الفطار'},
   ];
+  void _showMedicationInfoDialog() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(
+          'تفاصيل الدواء',
+          style: AppFonts.inter30BoldDark.copyWith(
+            fontSize: rs(context, 22),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: medicationData.length,
+            itemBuilder: (context, index) {
+              return MedicationInfo(
+                label: medicationData[index]['label']!,
+                value: medicationData[index]['value']!,
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('إغلاق'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   double rs(BuildContext context, double value) {
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -81,7 +118,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
           title: Text(
             'تفاصيل الدواء',
             style: AppFonts.inter30BoldDark.copyWith(
-              fontSize: rs(context, 36),
+              fontSize: rs(context, 30),
             ),
           ),
           leading: IconButton(
@@ -96,210 +133,260 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
           ),
           centerTitle: true,
         ),
-        body: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: rs(context, 48),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'أملوديبين',
-                          style: AppFonts.inter30BoldDark.copyWith(
-                            fontSize: rs(context, 24),
+        body: LayoutBuilder(
+  builder: (context, constraints) {
+    final isShortScreen = constraints.maxHeight < 500;
+
+    return Column(
+      children: [
+        // Medication Header
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: rs(context, 48),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'أملوديبين',
+                      style: AppFonts.inter30BoldDark.copyWith(
+                        fontSize: rs(context, 24),
+                      ),
+                    ),
+                    Text(
+                      '5 مجم',
+                      style: AppFonts.inter30BoldDark.copyWith(
+                        fontSize: rs(context, 20),
+                      ),
+                    ),
+                    Container(
+                      width: rs(context, 106),
+                      height: rs(context, 32),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: AppColors.softMintGreen,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'قطر الدم',
+                          style: AppFonts.inter18BoldRed.copyWith(
+                            fontSize: rs(context, 18),
                           ),
                         ),
-                        Text(
-                          '5 مجم',
-                          style: AppFonts.inter30BoldDark.copyWith(
-                            fontSize: rs(context, 20),
-                          ),
-                        ),
-                        Container(
-                          width: rs(context, 106),
-                          height: rs(context, 32),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            color: AppColors.softMintGreen,
-                          ),
-                          child: Center(
-                            child: Text(
-                              'قطر الدم',
-                              style: AppFonts.inter18BoldRed.copyWith(
-                                fontSize: rs(context, 18),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    width: rs(context, 30),
-                  ),
-                  Container(
-                    width: rs(context, 88),
-                    height: rs(context, 88),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: AppColors.lightBlue,
-                    ),
-                    child: Image.asset(
-                      'assets/imgs/Pill_Icon.png',
-                      width: rs(context, 56),
-                      height: rs(context, 24.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: rs(context, 48),
-                  vertical: rs(context, 36),
+                  ],
                 ),
-                child: ListView.builder(
-                  itemCount: medicationData.length,
-                  itemBuilder: (context, index) {
-                    return MedicationInfo(
-                      label: medicationData[index]['label']!,
-                      value: medicationData[index]['value']!,
+              ),
+
+              SizedBox(
+                width: rs(context, 30),
+              ),
+
+              Container(
+                width: rs(context, 88),
+                height: rs(context, 88),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: AppColors.lightBlue,
+                ),
+                child: Image.asset(
+                  'assets/imgs/Pill_Icon.png',
+                  width: rs(context, 56),
+                  height: rs(context, 24.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Medication Information
+        Expanded(
+          child: isShortScreen
+              ? Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _showMedicationInfoDialog,
+                    icon: Icon(
+                      Icons.info_outline,
+                      size: rs(context, 20),
+                    ),
+                    label: Text(
+                      'عرض تفاصيل الدواء',
+                      style: AppFonts.inter18BoldRed.copyWith(
+                        color: Colors.white,
+                        fontSize: rs(context, 14),
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.tealGreen,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(
+                        rs(context, 180),
+                        rs(context, 50),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                )
+              : Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: rs(context, 48),
+                    vertical: rs(context, 36),
+                  ),
+                  child: ListView.builder(
+                    itemCount: medicationData.length,
+                    itemBuilder: (context, index) {
+                      return MedicationInfo(
+                        label: medicationData[index]['label']!,
+                        value: medicationData[index]['value']!,
+                      );
+                    },
+                  ),
+                ),
+        ),
+
+        // Bottom Actions
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: rs(context, 8),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: rs(context, 5),
+              ),
+
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/add_medications',
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.tealGreen,
+                    minimumSize: Size(
+                      0,
+                      rs(context, 60),
+                    ),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add,
+                        size: rs(context, 18),
+                      ),
+                      Text(
+                        'إضافة دواء جديد',
+                        style: AppFonts.inter18BoldRed.copyWith(
+                          color: Colors.white,
+                          fontSize: rs(context, 10),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: rs(context, 8),
+
+              SizedBox(
+                width: rs(context, 5),
               ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: rs(context, 5),
-                  ),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.tealGreen,
-                        minimumSize: Size(
-                          0,
-                          rs(context, 60),
-                        ),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add,
-                            size: rs(context, 18),
-                          ),
-                          Text(
-                            'إضافة دواء جديد',
-                            style: AppFonts.inter18BoldRed.copyWith(
-                              color: Colors.white,
-                              fontSize: rs(context, 10),
-                            ),
-                          ),
-                        ],
-                      ),
+
+              // Delete Medication
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _showDeleteBottomSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    minimumSize: Size(
+                      0,
+                      rs(context, 60),
+                    ),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
                     ),
                   ),
-
-                  SizedBox(
-                    width: rs(context, 5),
-                  ),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showDeleteBottomSheet,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        minimumSize: Size(
-                          0,
-                          rs(context, 60),
-                        ),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.delete,
+                        size: rs(context, 14),
+                      ),
+                      Text(
+                        'حذف الدواء',
+                        style: AppFonts.inter18BoldRed.copyWith(
+                          color: Colors.white,
+                          fontSize: rs(context, 10),
                         ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.delete,
-                            size: rs(context, 14),
-                          ),
-                          Text(
-                            'حذف الدواء',
-                            style: AppFonts.inter18BoldRed.copyWith(
-                              color: Colors.white,
-                              fontSize: rs(context, 10),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-
-                  SizedBox(
-                    width: rs(context, 5),
-                  ),
-
-                  // إيقاف مؤقت
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _showPauseBottomSheet,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff8BA0BC),
-                        minimumSize: Size(
-                          0,
-                          rs(context, 60),
-                        ),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.pause,
-                            size: rs(context, 18),
-                          ),
-                          Text(
-                            'إيقاف الدواء مؤقتا',
-                            style: AppFonts.inter18BoldRed.copyWith(
-                              color: Colors.white,
-                              fontSize: rs(context, 10),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(
-                    width: rs(context, 5),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              SizedBox(
+                width: rs(context, 5),
+              ),
+
+              // Pause Medication
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _showPauseBottomSheet,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff8BA0BC),
+                    minimumSize: Size(
+                      0,
+                      rs(context, 60),
+                    ),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.pause,
+                        size: rs(context, 18),
+                      ),
+                      Text(
+                        'إيقاف الدواء مؤقتا',
+                        style: AppFonts.inter18BoldRed.copyWith(
+                          color: Colors.white,
+                          fontSize: rs(context, 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(
+                width: rs(context, 5),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
+  },
+)
+      )
+    );
+
   }
 }

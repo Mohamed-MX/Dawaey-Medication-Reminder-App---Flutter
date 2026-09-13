@@ -191,7 +191,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Icon(Icons.arrow_forward, size: 20, color: Color(0xFF1B363F)), // Forward icon because RTL
+                    Icon(Icons.arrow_back, size: 20, color: Color(0xFF1B363F)), // Forward icon because RTL
                     SizedBox(width: 8),
                     Text(
                       'السابق',
@@ -260,7 +260,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   ),
                   if (_currentPage < _totalPages - 1) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_back, size: 20, color: Colors.white), // Back icon because RTL
+                    const Icon(Icons.arrow_forward, size: 20, color: Colors.white), // Back icon because RTL
                   ]
                 ],
               ),
