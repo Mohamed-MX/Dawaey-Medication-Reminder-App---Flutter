@@ -47,6 +47,8 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.2.3
   flutter_svg: ^2.3.0
+  date_picker_timeline: ^1.4.0
+  month_year_picker: ^0.5.0+1
 
 dev_dependencies:
   flutter_test:

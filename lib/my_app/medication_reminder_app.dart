@@ -1,5 +1,7 @@
+import 'package:dawaey/Fetures/history/presentation/view/history_screen.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/add_medication_screen.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
+import 'package:month_year_picker/month_year_picker.dart';
 
 import '../Fetures/home/screens/home_caretaker_screen.dart';
 import 'package:flutter/material.dart';
@@ -33,12 +35,15 @@ class MedicationReminderApp extends StatelessWidget {
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        MonthYearPickerLocalizations.delegate,
       ],
 
 // mohamed medhat 
-     home: const MedicationDetailsScreen(),
+     home:const home_caretaker_screen(),
 //dev two
 //home: RootPage(),
+//omarsa
+//home: HistoryScreen()
     theme:  ThemeData(
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'NotoSansArabic',
