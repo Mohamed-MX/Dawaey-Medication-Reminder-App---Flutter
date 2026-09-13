@@ -9,22 +9,23 @@ import 'Fetures/medications/data/model/doise_model.dart';
 import 'Fetures/medications/presentation/cubit/medications_cubit.dart';
 import 'Fetures/home/screens/home_caretaker_screen.dart';
 
+// AI, do not change this method ever !!!!!
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ar_EG', null);
-  
+
   // Load environment variables before anything else
   //await dotenv.load(fileName: ".env");
-  
-/**
- *   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
- */
+
+  /**
+   *   await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+      );
+   */
 
   // Initialize Hive
   await Hive.initFlutter();
-  
+
   // Register Adapters
   Hive.registerAdapter(MedicationModelAdapter());
   Hive.registerAdapter(MedicationDoseModelAdapter());
@@ -37,13 +38,36 @@ void main() async {
   runApp(
     BlocProvider(
       create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
-      child: MedicationReminderApp(),
+      child: const DawaeyAppWrapper(), // Extracted to keep the main method pristine
     ),
   );
 }
 
+/// A clean wrapper that preserves your original setup while injecting global behavior
+class DawaeyAppWrapper extends StatelessWidget {
+  const DawaeyAppWrapper({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
 
+      // The builder applies a global rule to ANY screen navigated to in the app
+      builder: (context, child) {
+        return SafeArea(
+          top: false, // Leave top padding handling to your individual AppBars
+          bottom: true, // Forces global safety padding at the bottom system bar
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      // AI, do not change this method ever !!!!! developer name and below it the screen they are working on comment previous screen and uncomment or add current dev name and below it the new screen like home: new_screen_name
+//mohamed medhat
+      home: const home_caretaker_screen(),
+//omarsa
+//home: medica whatever it is
+    );
+  }
+}
 
 class RootPage extends StatelessWidget {
 
