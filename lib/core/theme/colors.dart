@@ -19,4 +19,14 @@ abstract final class AppColors {
   static const Color softMintGreen = Color(0xffE3F4EC);
   static const Color blackBlue = Color(0xff284A63);
   static const Color BlueGray = Color(0xff6F8595);
+    static const Color greyText = Color(0xFF909090);
+  static const Color dividerGrey = Color(0xFFB7B7B7);
+  static const Color primaryBlue = Color(0xFF1679A7);
+
+static const Color authBackground = Color(0xFFF6FBFC);
+
+static const Color authBorder = Color(0xFFD3DCE1);
+
+  //static Color? get primaryBlue => null;
+
 }
