@@ -1,17 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-enum MedicationFrequency {
-  onceDaily,
-  twiceDaily,
-  threeTimesDaily,
-  onceWeekly,
-}
+enum MedicationFrequency { onceDaily, twiceDaily, threeTimesDaily, onceWeekly }
 
-enum MedicationStatus {
-  active,
-  stopped,
-}
+enum MedicationStatus { active, stopped }
+
 class MedicationModel {
+  String id;
+  String patientId;
   String medicationName;
   String administrationRoute;
   String dosage;
@@ -25,6 +21,8 @@ class MedicationModel {
   MedicationStatus status;
 
   MedicationModel({
+    required this.id,
+    required this.patientId,
     required this.medicationName,
     required this.administrationRoute,
     required this.dosage,
@@ -37,4 +35,47 @@ class MedicationModel {
     required this.notes,
     required this.status,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'patientId': patientId,
+      'medicationName': medicationName,
+      'administrationRoute': administrationRoute,
+      'dosage': dosage,
+      'frequency': frequency.name,
+      'intakeTimes': intakeTimes.map((time) {
+        return {'hour': time.hour, 'minute': time.minute};
+      }).toList(),
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'remainingDoses': remainingDoses,
+      'remainingMedicationAmount': remainingMedicationAmount,
+      'notes': notes,
+      'status': status.name,
+    };
+  }
+
+  factory MedicationModel.fromMap(Map<String, dynamic> map) {
+    return MedicationModel(
+      id: map['id'] as String,
+      patientId: map['patientId'] as String,
+      medicationName: map['medicationName'] as String,
+      administrationRoute: map['administrationRoute'] as String,
+      dosage: map['dosage'] as String,
+      frequency: MedicationFrequency.values.byName(map['frequency']),
+      intakeTimes: (map['intakeTimes'] as List).map((time) {
+        return TimeOfDay(
+          hour: time['hour'] as int,
+          minute: time['minute'] as int,
+        );
+      }).toList(),
+      startDate: (map['startDate'] as Timestamp).toDate(),
+      endDate: (map['endDate'] as Timestamp).toDate(),
+      remainingDoses: map['remainingDoses'] as int,
+      remainingMedicationAmount: map['remainingMedicationAmount'] as int,
+      notes: map['notes'] as String,
+      status: MedicationStatus.values.byName(map['status']),
+    );
+  }
 }
