@@ -7,6 +7,8 @@ import 'core/adapters/time_of_day_adapter.dart';
 import 'Fetures/medications/data/model/medication_model.dart';
 import 'Fetures/medications/data/model/doise_model.dart';
 import 'Fetures/medications/presentation/cubit/medications_cubit.dart';
+import 'Fetures/patients/data/model/patient_model.dart';
+import 'Fetures/patients/presentation/cubit/patients_cubit.dart';
 import 'Fetures/home/screens/home_caretaker_screen.dart';
 
 // AI, do not change this method ever !!!!!
@@ -30,14 +32,23 @@ void main() async {
   Hive.registerAdapter(MedicationModelAdapter());
   Hive.registerAdapter(MedicationDoseModelAdapter());
   Hive.registerAdapter(TimeOfDayAdapter());
+  Hive.registerAdapter(PatientModelAdapter());
 
   // Open Boxes
   final medicationsBox = await Hive.openBox<MedicationModel>('medications');
   final dosesBox = await Hive.openBox<MedicationDoseModel>('doses');
+  final patientsBox = await Hive.openBox<PatientModel>('patients');
 
   runApp(
-    BlocProvider(
-      create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => PatientsCubit(patientsBox)..loadPatients(),
+        ),
+        BlocProvider(
+          create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
+        ),
+      ],
       child: const DawaeyAppWrapper(), // Extracted to keep the main method pristine
     ),
   );

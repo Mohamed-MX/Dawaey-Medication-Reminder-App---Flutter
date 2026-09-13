@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/medications_cubit.dart';
 import '../../data/model/medication_model.dart';
 import '../../data/model/doise_model.dart';
+import '../../../patients/presentation/cubit/patients_cubit.dart';
+import '../../../patients/presentation/cubit/patients_state.dart';
+import '../../../patients/data/model/patient_model.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   const AddMedicationScreen({super.key});
@@ -19,6 +22,16 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   DateTime? startSelectedDate ;
   DateTime? endSelectedDate ;
   List<TimeOfDay?> selectedTimes = List.filled(4, null);
+  String? selectedPatientId;
+
+  @override
+  void initState() {
+    super.initState();
+    final patientState = context.read<PatientsCubit>().state;
+    if (patientState is PatientsLoaded) {
+       selectedPatientId = patientState.selectedPatientId ?? patientState.patients.first.id;
+    }
+  }
 
   // Controllers
   final TextEditingController nameController = TextEditingController();
@@ -220,7 +233,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   final medId = DateTime.now().millisecondsSinceEpoch.toString();
                   final newMed = MedicationModel(
                     id: medId,
-                    patientId: 'user_1',
+                    patientId: selectedPatientId ?? 'user_1',
                     medicationName: name,
                     administrationRoute: selectedUsageMethod,
                     dosage: doseController.text.trim(),
@@ -287,6 +300,29 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
+          const Text('لمن هذا الدواء؟', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const SizedBox(height: 8),
+          BlocBuilder<PatientsCubit, PatientsState>(
+            builder: (context, state) {
+              if (state is PatientsLoaded) {
+                return DropdownButtonFormField<String>(
+                  value: selectedPatientId,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  ),
+                  items: state.patients.map((p) => DropdownMenuItem(value: p.id, child: Text('${p.name} (${p.relationship})'))).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedPatientId = val;
+                    });
+                  },
+                );
+              }
+              return const CircularProgressIndicator();
+            },
+          ),
+          const SizedBox(height: 24),
           const Text('اسم الدواء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           const SizedBox(height: 16),
           Container(

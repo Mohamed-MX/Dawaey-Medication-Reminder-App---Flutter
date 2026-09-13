@@ -7,20 +7,36 @@ import 'medications_state.dart';
 class MedicationsCubit extends Cubit<MedicationsState> {
   final Box<MedicationModel> _medicationsBox;
   final Box<MedicationDoseModel> _dosesBox;
+  String? _currentPatientId;
 
   MedicationsCubit(this._medicationsBox, this._dosesBox) : super(MedicationsInitial());
 
-  void loadMedications() {
+  void loadMedications({String? patientId, bool updateFilter = false}) {
+    if (updateFilter) {
+      _currentPatientId = patientId;
+    }
+
     emit(MedicationsLoading());
     try {
-      final medications = _medicationsBox.values.toList();
+      var medications = _medicationsBox.values.toList();
+      
+      // Filter by patient if _currentPatientId is not null
+      if (_currentPatientId != null) {
+         medications = medications.where((m) => m.patientId == _currentPatientId).toList();
+      }
+      
+      final medicationIds = medications.map((m) => m.id).toSet();
+      
       final allDoses = _dosesBox.values.toList();
+      
+      // Filter doses by patient's medications
+      final patientDoses = allDoses.where((d) => medicationIds.contains(d.medicationId)).toList();
       
       // Filter for today's doses
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       
-      final todaysDoses = allDoses.where((dose) {
+      final todaysDoses = patientDoses.where((dose) {
         final doseDate = DateTime(dose.date.year, dose.date.month, dose.date.day);
         return doseDate.isAtSameMomentAs(today);
       }).toList();
@@ -61,6 +77,7 @@ class MedicationsCubit extends Cubit<MedicationsState> {
            await _dosesBox.put(dose.id, dose);
         }
       }
+      // Reload keeping current filter
       loadMedications();
     } catch (e) {
       emit(MedicationsError("Failed to add medication: $e"));
@@ -79,6 +96,7 @@ class MedicationsCubit extends Cubit<MedicationsState> {
           status: status,
         );
         await _dosesBox.put(doseId, updatedDose);
+        // Reload keeping current filter
         loadMedications();
       }
     } catch (e) {

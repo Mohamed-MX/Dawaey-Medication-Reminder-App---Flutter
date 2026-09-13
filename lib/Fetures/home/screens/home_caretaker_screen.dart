@@ -5,6 +5,9 @@ import '../../medications/presentation/view/medications_screen.dart';
 import '../../medications/presentation/cubit/medications_cubit.dart';
 import '../../medications/presentation/cubit/medications_state.dart';
 import '../../medications/data/model/doise_model.dart';
+import '../../patients/presentation/cubit/patients_cubit.dart';
+import '../../patients/presentation/cubit/patients_state.dart';
+import '../../patients/data/model/patient_model.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -180,58 +183,92 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // User Dropdown section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      // user select dropdown to select from list of patients
-                    },
-                    child: Row(
+              BlocConsumer<PatientsCubit, PatientsState>(
+                listener: (context, patientState) {
+                  if (patientState is PatientsLoaded) {
+                    context.read<MedicationsCubit>().loadMedications(
+                          patientId: patientState.selectedPatientId,
+                          updateFilter: true,
+                        );
+                  }
+                },
+                builder: (context, patientState) {
+                  if (patientState is PatientsLoaded) {
+                    final selectedPatient = patientState.selectedPatientId == null
+                        ? null
+                        : patientState.patients.firstWhere(
+                            (p) => p.id == patientState.selectedPatientId,
+                            orElse: () => patientState.patients.first,
+                          );
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.grey,
-                          // TODO: Add actual image
-                          child: Icon(Icons.person, color: Colors.white, size: 30),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'أحمد محمد',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1B363F),
-                              ),
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.grey,
+                              child: Icon(Icons.person, color: Colors.white, size: 30),
                             ),
-                            Text(
-                              'أبي',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.teal,
-                              ),
+                            const SizedBox(width: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                DropdownButton<String?>(
+                                  value: patientState.selectedPatientId,
+                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.teal),
+                                  underline: const SizedBox(),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1B363F),
+                                    fontFamily: 'NotoSansArabic',
+                                  ),
+                                  onChanged: (String? newValue) {
+                                    context.read<PatientsCubit>().selectPatient(newValue);
+                                  },
+                                  items: [
+                                    ...patientState.patients.map<DropdownMenuItem<String?>>((PatientModel p) {
+                                      return DropdownMenuItem<String?>(
+                                        value: p.id,
+                                        child: Text(p.name),
+                                      );
+                                    }).toList(),
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('الكل'),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  selectedPatient?.relationship ?? 'جميع المرضى',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.teal,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add, color: Colors.teal, size: 20),
+                            onPressed: () {
+                              _showAddPatientDialog(context);
+                            },
+                          ),
+                        ),
                       ],
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.add, color: Colors.teal, size: 20),
-                      onPressed: () {
-                        // Add new users (patients to monitor)
-                      },
-                    ),
-                  ),
-                ],
+                    );
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
               ),
               const SizedBox(height: 30),
 
@@ -451,6 +488,77 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showAddPatientDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    String selectedRelationship = 'نفسي';
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('إضافة شخص جديد'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedRelationship,
+                    decoration: const InputDecoration(
+                      labelText: 'صلة القرابة',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'نفسي', child: Text('أنا')),
+                      DropdownMenuItem(value: 'أب', child: Text('أب')),
+                      DropdownMenuItem(value: 'أم', child: Text('أم')),
+                      DropdownMenuItem(value: 'أخ/أخت', child: Text('أخ/أخت')),
+                      DropdownMenuItem(value: 'ابن/ابنة', child: Text('ابن/ابنة')),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        if (val != null) selectedRelationship = val;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    if (name.isNotEmpty) {
+                      final newPatient = PatientModel(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        name: name,
+                        relationship: selectedRelationship,
+                      );
+                      context.read<PatientsCubit>().addPatient(newPatient);
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('إضافة'),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
   }
 }
