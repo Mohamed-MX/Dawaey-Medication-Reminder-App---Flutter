@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../medications/presentation/view/add_medication_screen.dart';
+import '../../medications/presentation/view/medications_screen.dart';
+import '../../medications/presentation/cubit/medications_cubit.dart';
+import '../../medications/presentation/cubit/medications_state.dart';
+import '../../medications/data/model/doise_model.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -39,7 +44,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
           ),
           centerTitle: true,
         ),
-        body: _buildBody(),
+        body: _selectedIndex == 0 ? _buildBody() : (_selectedIndex == 1 ? const MedicationsScreen() : const Center(child: Text('صفحة قيد الإنشاء'))),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             Navigator.push(
@@ -118,210 +123,244 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
   }
 
   Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // User Dropdown section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                onTap: () {
-                  // user select dropdown to select from list of patients
-                },
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.grey,
-                      // TODO: Add actual image
-                      child: Icon(Icons.person, color: Colors.white, size: 30),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'أحمد محمد',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1B363F),
-                          ),
-                        ),
-                        Text(
-                          'أبي',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.teal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.add, color: Colors.teal, size: 20),
-                  onPressed: () {
-                    // Add new users (patients to monitor)
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 30),
+    return BlocBuilder<MedicationsCubit, MedicationsState>(
+      builder: (context, state) {
+        if (state is MedicationsLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is MedicationsError) {
+          return Center(child: Text(state.message));
+        }
 
-          // Weekly Commitment Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        int totalDoses = 0;
+        int takenDoses = 0;
+        List<Widget> medicationCards = [];
+
+        if (state is MedicationsLoaded) {
+          totalDoses = state.totalDosesCount;
+          takenDoses = state.takenDosesCount;
+
+          for (var dose in state.todaysDoses) {
+            final med = state.getMedicationById(dose.medicationId);
+            final name = med?.medicationName ?? 'غير معروف';
+            
+            // Format time
+            final hour = dose.time.hour;
+            final minute = dose.time.minute.toString().padLeft(2, '0');
+            final period = hour >= 12 ? 'م' : 'ص';
+            final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+            final timeStr = '$hour12:$minute $period';
+
+            final taken = dose.status == DoseStatus.taken;
+            final upcoming = dose.status == DoseStatus.pending;
+
+            medicationCards.add(Column(
               children: [
-                const Text(
-                  'نسبة الالتزام هذا الأسبوع',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B363F),
-                  ),
-                ),
+                _buildMedicationCard(name, timeStr, taken, upcoming, () {
+                    // Toggle status for demo purposes
+                    final newStatus = taken ? DoseStatus.pending : DoseStatus.taken;
+                    context.read<MedicationsCubit>().updateDoseStatus(dose.id, newStatus);
+                }),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'ممتاز',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
-                          ),
+              ],
+            ));
+          }
+
+          if (medicationCards.isEmpty) {
+            medicationCards.add(const Center(child: Text('لا توجد أدوية اليوم')));
+          }
+        }
+
+        final adherenceRatio = totalDoses == 0 ? 0.0 : takenDoses / totalDoses;
+        final adherencePercentage = (adherenceRatio * 100).toInt();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // User Dropdown section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      // user select dropdown to select from list of patients
+                    },
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.grey,
+                          // TODO: Add actual image
+                          child: Icon(Icons.person, color: Colors.white, size: 30),
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'استمروا على هذا المستوى المميز',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 70,
-                      width: 70,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          CircularProgressIndicator(
-                            value: 0.86,
-                            backgroundColor: Colors.grey.shade200,
-                            color: Colors.teal,
-                            strokeWidth: 6,
-                          ),
-                          const Center(
-                            child: Text(
-                              '86%',
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'أحمد محمد',
                               style: TextStyle(
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1B363F),
-                                fontSize: 16,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                            Text(
+                              'أبي',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.add, color: Colors.teal, size: 20),
+                      onPressed: () {
+                        // Add new users (patients to monitor)
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // Weekly Commitment Card
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
-                const SizedBox(height: 30),
-                // Bar Chart
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildBar('أحد', 0.5, Colors.red, false),
-                    _buildBar('إثنين', 0.7, Colors.teal, true),
-                    _buildBar('ثلاثاء', 0.6, Colors.teal, true),
-                    _buildBar('أربعاء', 0.8, Colors.teal, true),
-                    _buildBar('خميس', 0.4, Colors.red, false),
-                    _buildBar('جمعة', 0.75, Colors.teal, true),
-                    _buildBar('سبت', 0.5, Colors.red, false),
+                    const Text(
+                      'نسبة الالتزام هذا الأسبوع',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1B363F),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'ممتاز',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'استمروا على هذا المستوى المميز',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: 70,
+                          width: 70,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CircularProgressIndicator(
+                                value: adherenceRatio,
+                                backgroundColor: Colors.grey.shade200,
+                                color: Colors.teal,
+                                strokeWidth: 6,
+                              ),
+                              Center(
+                                child: Text(
+                                  '$adherencePercentage%',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1B363F),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                    // Bar Chart
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildBar('أحد', 0.5, Colors.red, false),
+                        _buildBar('إثنين', 0.7, Colors.teal, true),
+                        _buildBar('ثلاثاء', 0.6, Colors.teal, true),
+                        _buildBar('أربعاء', 0.8, Colors.teal, true),
+                        _buildBar('خميس', 0.4, Colors.red, false),
+                        _buildBar('جمعة', 0.75, Colors.teal, true),
+                        _buildBar('سبت', 0.5, Colors.red, false),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 30),
+              ),
+              const SizedBox(height: 30),
 
-          // Today's Medications
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'أدوية اليوم',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1B363F),
-                ),
+              // Today's Medications
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'أدوية اليوم',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B363F),
+                    ),
+                  ),
+                  Text(
+                    'تم $totalDoses/$takenDoses',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.teal,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'تم 3/2',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.teal,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const SizedBox(height: 16),
+
+              ...medicationCards,
             ],
           ),
-          const SizedBox(height: 16),
-
-          _buildMedicationCard(
-            'أملوديبين 5 مجم',
-            '9:00 ص',
-            true, // taken
-            false, // upcoming
-          ),
-          const SizedBox(height: 16),
-          _buildMedicationCard(
-            'ميتفورمين 500 مجم',
-            '2:00 م',
-            false, // missed
-            false, // upcoming
-          ),
-          const SizedBox(height: 16),
-          _buildMedicationCard(
-            'أتورفاستاتين 20 مجم',
-            '8:00 م',
-            false, // missed
-            true, // upcoming
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -354,7 +393,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
   }
 
   Widget _buildMedicationCard(
-      String name, String time, bool taken, bool upcoming) {
+      String name, String time, bool taken, bool upcoming, VoidCallback onTap) {
     Color bgColor;
     Color iconColor;
     IconData icon;
@@ -374,9 +413,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
     }
 
     return InkWell(
-      onTap: () {
-        // Navigate to user profile
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(

@@ -1,5 +1,4 @@
-import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
-import '../Fetures/medications/presentation/view/add_medication_screen.dart';
+import '../Fetures/home/screens/home_caretaker_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 class MedicationReminderApp extends StatelessWidget {
@@ -11,7 +10,9 @@ class MedicationReminderApp extends StatelessWidget {
       builder: (context, child) {
       return Directionality(
           textDirection: TextDirection.rtl,
-          child: child!,
+          child: SafeArea(
+              top: false,
+            child: child!),
     );
       },
       debugShowCheckedModeBanner: false,
@@ -29,7 +30,7 @@ class MedicationReminderApp extends StatelessWidget {
       ],
 
 // mohamed medhat 
-     home: AddMedicationScreen(),
+     home: const home_caretaker_screen(),
 //dev two
 //home: RootPage(),
     theme:  ThemeData(

@@ -1,5 +1,9 @@
 import 'package:dawaey/Fetures/medications/widgets/calender.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../cubit/medications_cubit.dart';
+import '../../data/model/medication_model.dart';
+import '../../data/model/doise_model.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   const AddMedicationScreen({super.key});
@@ -14,7 +18,28 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   final int _totalPages = 6;
   DateTime? startSelectedDate ;
   DateTime? endSelectedDate ;
-  List<TimeOfDay?> selectedTimes = List.filled(3, null);
+  List<TimeOfDay?> selectedTimes = List.filled(4, null);
+
+  // Controllers
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController doseController = TextEditingController();
+  final TextEditingController remainingDosesController = TextEditingController();
+  final TextEditingController pillsLeftController = TextEditingController();
+  final TextEditingController notesController = TextEditingController();
+
+  String selectedUsageMethod = 'قرص';
+  String selectedFrequency = 'مرتين يوميًا';
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    doseController.dispose();
+    remainingDosesController.dispose();
+    pillsLeftController.dispose();
+    notesController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
     double rs(BuildContext context, double value) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final scale = (screenWidth / 382).clamp(0.9, 1.2);
@@ -186,7 +211,30 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (_currentPage == _totalPages - 1) {
-                  // TODO: Submit action
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال اسم الدواء')));
+                    return;
+                  }
+                  
+                  final medId = DateTime.now().millisecondsSinceEpoch.toString();
+                  final newMed = MedicationModel(
+                    id: medId,
+                    patientId: 'user_1',
+                    medicationName: name,
+                    administrationRoute: selectedUsageMethod,
+                    dosage: doseController.text.trim(),
+                    frequency: _mapFrequency(selectedFrequency),
+                    intakeTimes: selectedTimes.take(_getSlotCount()).where((t) => t != null).cast<TimeOfDay>().toList(),
+                    startDate: startSelectedDate ?? DateTime.now(),
+                    endDate: endSelectedDate ?? DateTime.now().add(const Duration(days: 30)),
+                    remainingDoses: int.tryParse(remainingDosesController.text) ?? 0,
+                    remainingMedicationAmount: int.tryParse(pillsLeftController.text) ?? 0,
+                    notes: notesController.text,
+                    status: MedicationStatus.active,
+                  );
+
+                  context.read<MedicationsCubit>().addMedication(newMed);
                   Navigator.of(context).pop();
                 } else {
                   _nextPage();
@@ -224,6 +272,16 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   }
 
   // --- Step 1 ---
+  MedicationFrequency _mapFrequency(String freq) {
+    switch (freq) {
+      case 'مرة واحدة يوميًا': return MedicationFrequency.onceDaily;
+      case 'مرتين يوميًا': return MedicationFrequency.twiceDaily;
+      case 'ثلاث مرات يوميًا': return MedicationFrequency.threeTimesDaily;
+      case 'أربع مرات يوميًا': return MedicationFrequency.fourTimesDaily;
+      default: return MedicationFrequency.onceDaily;
+    }
+  }
+
   Widget _buildStep1() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -243,6 +301,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           ),
           const SizedBox(height: 8),
           TextField(
+            controller: nameController,
             decoration: InputDecoration(
               hintText: 'مثال: أموكسيسيلين',
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -310,13 +369,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12))),
-                  child: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
-                ),
                 Expanded(
                   child: TextField(
+                    controller: doseController,
                     decoration: const InputDecoration(
                       hintText: 'مثال: 500 مجم',
                       border: InputBorder.none,
@@ -335,46 +390,54 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildUsageMethod('قرص', Icons.circle_outlined, true)),
+              Expanded(child: _buildUsageMethod('قرص', Icons.circle_outlined)),
               const SizedBox(width: 12),
-              Expanded(child: _buildUsageMethod('كبسولة', Icons.medication, false)),
+              Expanded(child: _buildUsageMethod('كبسولة', Icons.medication)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildUsageMethod('شراب', Icons.local_drink, false)),
+              Expanded(child: _buildUsageMethod('شراب', Icons.local_drink)),
               const SizedBox(width: 12),
-              Expanded(child: _buildUsageMethod('حقنة', Icons.vaccines, false)),
+              Expanded(child: _buildUsageMethod('حقنة', Icons.vaccines)),
             ],
           ),
           const SizedBox(height: 12),
-          _buildUsageMethod('أخرى', Icons.close, false, fullWidth: true),
+          _buildUsageMethod('أخرى', Icons.close, fullWidth: true),
         ],
       ),
     );
   }
 
-  Widget _buildUsageMethod(String title, IconData icon, bool selected, {bool fullWidth = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      decoration: BoxDecoration(
-        color: selected ? Colors.teal.shade50 : Colors.white,
-        border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
-            ],
-          ),
-          if (selected) const Icon(Icons.radio_button_checked, color: Colors.teal),
-        ],
+  Widget _buildUsageMethod(String title, IconData icon, {bool fullWidth = false}) {
+    bool selected = selectedUsageMethod == title;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedUsageMethod = title;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: selected ? Colors.teal.shade50 : Colors.white,
+          border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
+              ],
+            ),
+            if (selected) const Icon(Icons.radio_button_checked, color: Colors.teal),
+          ],
+        ),
       ),
     );
   }
@@ -398,41 +461,58 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             child: const Text('كم مرة يتم تناوله؟', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           ),
           const SizedBox(height: 16),
-          _buildFrequencyOption('مرة واحدة يوميًا', false),
+          _buildFrequencyOption('مرة واحدة يوميًا'),
           const SizedBox(height: 12),
-          _buildFrequencyOption('مرتين يوميًا', true),
+          _buildFrequencyOption('مرتين يوميًا'),
           const SizedBox(height: 12),
-          _buildFrequencyOption('ثلاث مرات يوميًا', false),
+          _buildFrequencyOption('ثلاث مرات يوميًا'),
           const SizedBox(height: 12),
-          _buildFrequencyOption('كل يومين', false),
-          const SizedBox(height: 12),
-          // User requested adding "every X hours" option here
-          _buildFrequencyOption('كل (عدد الساعات) ساعة', false),
+          _buildFrequencyOption('أربع مرات يوميًا'),
         ],
       ),
     );
   }
 
-  Widget _buildFrequencyOption(String title, bool selected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: selected ? Colors.teal.shade50 : Colors.white,
-        border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
-          Icon(selected ? Icons.check_circle : Icons.circle_outlined, color: selected ? Colors.teal : Colors.grey),
-        ],
+  Widget _buildFrequencyOption(String title) {
+    bool selected = selectedFrequency == title;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedFrequency = title;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: selected ? Colors.teal.shade50 : Colors.white,
+          border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
+            Icon(selected ? Icons.check_circle : Icons.circle_outlined, color: selected ? Colors.teal : Colors.grey),
+          ],
+        ),
       ),
     );
   }
 
   // --- Step 4 ---
+  int _getSlotCount() {
+    switch (selectedFrequency) {
+      case 'مرة واحدة يوميًا': return 1;
+      case 'مرتين يوميًا': return 2;
+      case 'ثلاث مرات يوميًا': return 3;
+      case 'أربع مرات يوميًا': return 4;
+      default: return 1;
+    }
+  }
+
   Widget _buildStep4() {
+    final int slotCount = _getSlotCount();
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
@@ -450,35 +530,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             child: const Text('اختر مواعيد التناول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           ),
           const SizedBox(height: 16),
-          _buildTimeOption('08:00' , 0),
-          const SizedBox(height: 12),
-          _buildTimeOption('14:00' , 1),
-          const SizedBox(height: 12),
-          _buildTimeOption('20:00' , 2),
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50,
-              border: Border.all(color: Colors.teal),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.add, color: Colors.teal),
-                SizedBox(width: 8),
-                Text('إضافة موعد جديد', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
-              ],
-            ),
-          )
+          ...List.generate(slotCount, (index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: _buildTimeOption(index),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildTimeOption(String time , int index) {
+  Widget _buildTimeOption(int index) {
     final time = selectedTimes[index];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -489,18 +552,37 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-         selectedTimes[index] == null ? Text("بالرجاء تحديد موعد", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))) :  Text("${time!.hour % 12 == 0 ? 12 : time!.hour % 12}:${time!.minute}${time!.hour > 12 ?  'مساء ' : "صباحا "}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-         IconButton( onPressed:()async{
-        TimeOfDay? selectedTime = await showTimePicker(
-       context: context,
-       initialTime: TimeOfDay.now(),
-          );
-          if(selectedTime != null){
-          setState(() {
-            selectedTimes[index] = selectedTime;
-          });
-          }
-         },icon : Icon(Icons.access_time), color: Colors.red),
+         time == null 
+          ? const Text("بالرجاء تحديد موعد", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))) 
+          : Text("${time.hour % 12 == 0 ? 12 : time.hour % 12}:${time.minute.toString().padLeft(2, '0')} ${time.hour >= 12 ? 'مساء' : 'صباحا'}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+         IconButton(
+          onPressed: () async {
+            TimeOfDay? selectedTime = await showTimePicker(
+              context: context,
+              initialTime: time ?? TimeOfDay.now(),
+            );
+            if (selectedTime != null) {
+              setState(() {
+                selectedTimes[index] = selectedTime;
+                
+                // Auto-fill subsequent times if the first slot is selected
+                if (index == 0) {
+                  int interval = 24;
+                  if (selectedFrequency == 'مرتين يوميًا') interval = 12;
+                  else if (selectedFrequency == 'ثلاث مرات يوميًا') interval = 8;
+                  else if (selectedFrequency == 'أربع مرات يوميًا') interval = 6;
+
+                  for (int i = 1; i < _getSlotCount(); i++) {
+                    int newHour = (selectedTime.hour + (interval * i)) % 24;
+                    selectedTimes[i] = TimeOfDay(hour: newHour, minute: selectedTime.minute);
+                  }
+                }
+              });
+            }
+          }, 
+          icon: const Icon(Icons.access_time), 
+          color: Colors.red
+         ),
         ],
       ),
     );
@@ -524,7 +606,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const SizedBox(height: 16),
           _buildDateField('تاريخ الانتهاء (اختياري)' , 'end' , icon: Icons.calendar_today),
           const SizedBox(height: 16),
-          _buildInputField('عدد الجرعات المتبقية (اختياري)', 'مثال: 30'),
+          _buildInputField('عدد الجرعات المتبقية (اختياري)', 'مثال: 30', controller: remainingDosesController),
         ],
       ),
     );
@@ -544,28 +626,33 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                  final selectedDatev =  await showDialog<DateTime>(
                   context: context,
                    builder: (context){
-                    DateTime? selected ;
+                    DateTime? selected = type == 'start' ? startSelectedDate : endSelectedDate;
                         return AlertDialog(
                           content: SingleChildScrollView(
                             child: SizedBox(
                               width: rs(context, 350),
-                              child: CalenderFeature( beforeDate: startSelectedDate , onSelected: (value) {
-                                selected = value;
-                              } ,),
-                              
+                              child: CalenderFeature( 
+                                beforeDate: type == 'start' ? null : startSelectedDate, 
+                                initialDate: type == 'start' ? startSelectedDate : endSelectedDate,
+                                onSelected: (value) {
+                                  selected = value;
+                                }
+                              ),
                             ),
                           ),
                           actions: [
                             ElevatedButton(onPressed: (){
                               Navigator.pop(context , selected );
-                            }, child: Text("تأكيد"))
+                            }, child: const Text("تأكيد"))
                           ],
                         );
                    });
-                   setState(() {
-                    
-                    type == 'start' ? startSelectedDate =  selectedDatev : endSelectedDate = selectedDatev ;
-                   });
+                   
+                   if (selectedDatev != null) {
+                     setState(() {
+                      type == 'start' ? startSelectedDate = selectedDatev : endSelectedDate = selectedDatev ;
+                     });
+                   }
             } , icon: Icon(icon), color: Colors.grey) : null,
 
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -575,13 +662,14 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       ],
     );
   }
-  Widget _buildInputField(String label, String hint, {IconData? icon}) {
+  Widget _buildInputField(String label, String hint, {IconData? icon, TextEditingController? controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
@@ -605,6 +693,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const Text('كم قرصا متبقي لديك ؟', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           const SizedBox(height: 8),
           TextField(
+            controller: pillsLeftController,
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -614,6 +703,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const Text('ملاحظات إضافية (اختياري)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
           const SizedBox(height: 8),
           TextField(
+            controller: notesController,
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'أي ملاحظات مهمة حول الدواء...',

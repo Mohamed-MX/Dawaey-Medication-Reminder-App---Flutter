@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
-enum MedicationFrequency { onceDaily, twiceDaily, threeTimesDaily, onceWeekly }
+enum MedicationFrequency { onceDaily, twiceDaily, threeTimesDaily, fourTimesDaily, onceWeekly }
 
 enum MedicationStatus { active, stopped }
 
@@ -77,5 +78,46 @@ class MedicationModel {
       notes: map['notes'] as String,
       status: MedicationStatus.values.byName(map['status']),
     );
+  }
+}
+
+class MedicationModelAdapter extends TypeAdapter<MedicationModel> {
+  @override
+  final int typeId = 0;
+
+  @override
+  MedicationModel read(BinaryReader reader) {
+    return MedicationModel(
+      id: reader.readString(),
+      patientId: reader.readString(),
+      medicationName: reader.readString(),
+      administrationRoute: reader.readString(),
+      dosage: reader.readString(),
+      frequency: MedicationFrequency.values.byName(reader.readString()),
+      intakeTimes: reader.readList().map((e) => e as TimeOfDay).toList(),
+      startDate: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
+      endDate: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
+      remainingDoses: reader.readInt(),
+      remainingMedicationAmount: reader.readInt(),
+      notes: reader.readString(),
+      status: MedicationStatus.values.byName(reader.readString()),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MedicationModel obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.patientId);
+    writer.writeString(obj.medicationName);
+    writer.writeString(obj.administrationRoute);
+    writer.writeString(obj.dosage);
+    writer.writeString(obj.frequency.name);
+    writer.writeList(obj.intakeTimes);
+    writer.writeInt(obj.startDate.millisecondsSinceEpoch);
+    writer.writeInt(obj.endDate.millisecondsSinceEpoch);
+    writer.writeInt(obj.remainingDoses);
+    writer.writeInt(obj.remainingMedicationAmount);
+    writer.writeString(obj.notes);
+    writer.writeString(obj.status.name);
   }
 }

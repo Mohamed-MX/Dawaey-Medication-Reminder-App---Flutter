@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 enum DoseStatus {
   pending,
@@ -48,5 +49,30 @@ class MedicationDoseModel {
       ),
       status: DoseStatus.values.byName(map['status'] as String),
     );
+  }
+}
+
+class MedicationDoseModelAdapter extends TypeAdapter<MedicationDoseModel> {
+  @override
+  final int typeId = 1;
+
+  @override
+  MedicationDoseModel read(BinaryReader reader) {
+    return MedicationDoseModel(
+      id: reader.readString(),
+      medicationId: reader.readString(),
+      date: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
+      time: reader.read() as TimeOfDay,
+      status: DoseStatus.values.byName(reader.readString()),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MedicationDoseModel obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.medicationId);
+    writer.writeInt(obj.date.millisecondsSinceEpoch);
+    writer.write(obj.time);
+    writer.writeString(obj.status.name);
   }
 }

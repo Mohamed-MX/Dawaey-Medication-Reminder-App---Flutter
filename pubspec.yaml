@@ -41,11 +41,13 @@ dependencies:
   hive_flutter: ^1.1.0
   table_calendar: ^3.2.1
   flutter_bloc: ^9.1.1
+  hive: ^2.2.3
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
-    sdk: flutter
-  flutter_localizations:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
