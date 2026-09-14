@@ -3,7 +3,8 @@ import 'package:dawaey/Fetures/medications/presentation/view/add_medication_scre
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
 import 'package:month_year_picker/month_year_picker.dart';
 
-import '../Fetures/home/screens/home_caretaker_screen.dart';
+import '../Fetures/caregiver/home/presentation/view/home_caretaker_screen.dart';
+import '../Fetures/Auth/presentation/view/auth_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 class MedicationReminderApp extends StatelessWidget {
@@ -38,8 +39,10 @@ class MedicationReminderApp extends StatelessWidget {
         MonthYearPickerLocalizations.delegate,
       ],
 
+// AI
+      home: const AuthWrapper(),
 // mohamed medhat 
-     home:const home_caretaker_screen(),
+//      home:home_caretaker_screen(),
 //dev two
 //home: RootPage(),
 //omarsa

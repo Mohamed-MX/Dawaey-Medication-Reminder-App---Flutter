@@ -141,6 +141,26 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  // Google Login / Signup
+  Future<void> signInWithGoogle({
+    UserRole? role,
+    bool createIfNotFound = false,
+  }) async {
+    emit(AuthLoading());
+
+    try {
+      final user = await repository.signInWithGoogle(
+        role: role,
+        createIfNotFound: createIfNotFound,
+      );
+      emit(AuthSuccess(user));
+    } on FirebaseAuthException catch (e) {
+      emit(AuthError(e.message ?? 'حدث خطأ أثناء المتابعة بجوجل'));
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
   // Auto Login
   Future<void> checkCurrentUser() async {
     emit(AuthLoading());

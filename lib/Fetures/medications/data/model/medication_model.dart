@@ -37,6 +37,38 @@ class MedicationModel {
     required this.status,
   });
 
+  MedicationModel copyWith({
+    String? id,
+    String? patientId,
+    String? medicationName,
+    String? administrationRoute,
+    String? dosage,
+    MedicationFrequency? frequency,
+    List<TimeOfDay>? intakeTimes,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? remainingDoses,
+    int? remainingMedicationAmount,
+    String? notes,
+    MedicationStatus? status,
+  }) {
+    return MedicationModel(
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      medicationName: medicationName ?? this.medicationName,
+      administrationRoute: administrationRoute ?? this.administrationRoute,
+      dosage: dosage ?? this.dosage,
+      frequency: frequency ?? this.frequency,
+      intakeTimes: intakeTimes ?? this.intakeTimes,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      remainingDoses: remainingDoses ?? this.remainingDoses,
+      remainingMedicationAmount: remainingMedicationAmount ?? this.remainingMedicationAmount,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

@@ -6,6 +6,9 @@ import 'package:dawaey/Fetures/Auth/presentation/widgets/auth_text_field.dart';
 import 'package:dawaey/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view/signup_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -41,42 +44,38 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final bool isTablet = screenWidth >= 600;
 
-    return BlocProvider(
-      create: (context) {
-        return AuthCubit();
+    return BlocConsumer<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError) {
+          if (state.message.contains('google_new_user')) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SignupScreen(role: UserRole.patient),
+              ),
+            );
+            return;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.message,
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+
+        if (state is AuthSuccess) {
+          // BlocBuilder in main.dart handles routing automatically
+        }
       },
+      builder: (context, state) {
+        final cubit = context.read<AuthCubit>();
 
-      child: BlocConsumer<AuthCubit, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.message,
-                ),
-              ),
-            );
-          }
-
-          if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'تم تسجيل الدخول بنجاح',
-                ),
-              ),
-            );
-
-            // Navigation للـ Home
-            // هنعمله بعدين على حسب Role المستخدم
-          }
-        },
-
-        builder: (context, state) {
-          final cubit = context.read<AuthCubit>();
-
-          return Directionality(
-            textDirection: TextDirection.rtl,
+        return Directionality(
+          textDirection: TextDirection.rtl,
 
             child: Scaffold(
               // خلفية شاشة الـ Login
@@ -108,9 +107,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             SizedBox(
                               width: isTablet ? 180 : 145,
                               height: isTablet ? 120 : 100,
-
-                              child: SvgPicture.asset(
-                                'assets/assets_auth/04_Brand.svg',
+                              child: Image.asset(
+                                'assets/transpa app icon.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -337,6 +335,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 32,
                             ),
 
+                            // Google Login Button
+                            AuthButton(
+                              text: 'المتابعة باستخدام جوجل',
+                              isOutlined: true,
+                              icon: SvgPicture.asset(
+                                'assets/imgs/google_logo.svg',
+                                height: 24,
+                                width: 24,
+                              ),
+                              onPressed: () {
+                                cubit.signInWithGoogle();
+                              },
+                            ),
+
+                            const SizedBox(
+                              height: 16,
+                            ),
+
                             // Create Account Button
                             AuthButton(
                               text: 'إنشاء حساب',
@@ -349,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   MaterialPageRoute(
                                     builder: (context) {
-                                      return const RoleSelectionScreen();
+                                      return const SignupScreen(role: UserRole.patient);
                                     },
                                   ),
                                 );
@@ -369,7 +385,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 }

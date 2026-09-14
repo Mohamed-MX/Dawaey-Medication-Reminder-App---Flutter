@@ -6,6 +6,7 @@ class AuthButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isOutlined;
+  final Widget? icon;
 
   const AuthButton({
     super.key,
@@ -13,6 +14,7 @@ class AuthButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.isOutlined = false,
+    this.icon,
   });
 
   @override
@@ -39,13 +41,22 @@ class AuthButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: AppColors.primaryBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    icon!,
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             )
           : ElevatedButton(
@@ -71,14 +82,23 @@ class AuthButton extends StatelessWidget {
                         color: Colors.white,
                       ),
                     )
-                  : Text(
-                      text,
-                      style: const TextStyle(
-                        // الكلام داخل الزر أبيض
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (icon != null) ...[
+                          icon!,
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          text,
+                          style: const TextStyle(
+                            // الكلام داخل الزر أبيض
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
             ),
     );

@@ -10,6 +10,12 @@ import 'Fetures/medications/presentation/cubit/medications_cubit.dart';
 import 'Fetures/patients/data/model/patient_model.dart';
 import 'Fetures/patients/presentation/cubit/patients_cubit.dart';
 import 'Fetures/home/screens/home_caretaker_screen.dart';
+import 'Fetures/Auth/presentation/view_model/auth_cubit.dart';
+import 'Fetures/Auth/presentation/view_model/auth_state.dart';
+import 'Fetures/Auth/presentation/view/login_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // AI, do not change this method ever !!!!!
 void main() async {
@@ -17,13 +23,11 @@ void main() async {
   await initializeDateFormatting('ar_EG', null);
 
   // Load environment variables before anything else
-  //await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: ".env");
 
-  /**
-   *   await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-      );
-   */
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -35,18 +39,24 @@ void main() async {
   Hive.registerAdapter(PatientModelAdapter());
 
   // Open Boxes
-  final medicationsBox = await Hive.openBox<MedicationModel>('medications');
-  final dosesBox = await Hive.openBox<MedicationDoseModel>('doses');
-  final patientsBox = await Hive.openBox<PatientModel>('patients');
+  // final medicationsBox = await Hive.openBox<MedicationModel>('medications');
+  // final dosesBox = await Hive.openBox<MedicationDoseModel>('doses');
+  // final patientsBox = await Hive.openBox<PatientModel>('patients');
+  await Hive.openBox('authBox'); // Required for AuthLocalStorage
 
   runApp(
     MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => PatientsCubit(patientsBox)..loadPatients(),
+          create: (context) => PatientsCubit()..loadPatients(),
+          // create: (context) => PatientsCubit(patientsBox)..loadPatients(),
         ),
         BlocProvider(
-          create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
+          create: (context) => MedicationsCubit()..loadMedications(),
+          // create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
+        ),
+        BlocProvider(
+          create: (context) => AuthCubit()..checkCurrentUser(),
         ),
       ],
       child: const DawaeyAppWrapper(), // Extracted to keep the main method pristine
@@ -54,7 +64,6 @@ void main() async {
   );
 }
 
-/// A clean wrapper that preserves your original setup while injecting global behavior
 class DawaeyAppWrapper extends StatelessWidget {
   const DawaeyAppWrapper({super.key});
 
@@ -62,18 +71,28 @@ class DawaeyAppWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
-      // The builder applies a global rule to ANY screen navigated to in the app
       builder: (context, child) {
         return SafeArea(
-          top: false, // Leave top padding handling to your individual AppBars
-          bottom: true, // Forces global safety padding at the bottom system bar
+          top: false,
+          bottom: true,
           child: child ?? const SizedBox.shrink(),
         );
       },
-      // AI, do not change this method ever !!!!! developer name and below it the screen they are working on comment previous screen and uncomment or add current dev name and below it the new screen like home: new_screen_name
+      // AI, do not change the way of this method ever !!!!! developer name and below it the screen they are working on comment previous screen and uncomment or add current dev name and below it the new screen like home: new_screen_name
 //mohamed medhat
-      home: const home_caretaker_screen(),
+      home: BlocBuilder<AuthCubit, AuthState>(
+        builder: (context, state) {
+          if (state is AuthLoading || state is AuthInitial) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          } else if (state is AuthSuccess) {
+            return const home_caretaker_screen();
+          } else {
+            return const LoginScreen();
+          }
+        },
+      ),
 //omarsa
 //home: medica whatever it is
     );
@@ -81,29 +100,17 @@ class DawaeyAppWrapper extends StatelessWidget {
 }
 
 class RootPage extends StatelessWidget {
-
   const RootPage({super.key});
 
   @override
-
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       appBar: AppBar(
-
         title: const Text('My App'),
-
       ),
-
       body: const Center(
-
         child: Text('Hello World'),
-
       ),
-
     );
-
   }
-
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../medications/presentation/view/add_medication_screen.dart';
 import '../../medications/presentation/view/medications_screen.dart';
@@ -8,6 +8,7 @@ import '../../medications/data/model/doise_model.dart';
 import '../../patients/presentation/cubit/patients_cubit.dart';
 import '../../patients/presentation/cubit/patients_state.dart';
 import '../../patients/data/model/patient_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -46,6 +47,43 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
             ),
           ),
           centerTitle: true,
+          actions: [
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('الحساب'),
+                    content: const Text('ماذا تريد أن تفعل؟'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('إلغاء'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          context.read<AuthCubit>().logout();
+                        },
+                        child: const Text(
+                          'تسجيل الخروج',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: const Padding(
+                padding: EdgeInsets.only(left: 16),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Color(0xFFE0F2F1),
+                  child: Icon(Icons.person, color: Colors.teal, size: 22),
+                ),
+              ),
+            ),
+          ],
         ),
         body: _selectedIndex == 0 ? _buildBody() : (_selectedIndex == 1 ? const MedicationsScreen() : const Center(child: Text('صفحة قيد الإنشاء'))),
         floatingActionButton: FloatingActionButton(
@@ -206,11 +244,6 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
                       children: [
                         Row(
                           children: [
-                            const CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.grey,
-                              child: Icon(Icons.person, color: Colors.white, size: 30),
-                            ),
                             const SizedBox(width: 16),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

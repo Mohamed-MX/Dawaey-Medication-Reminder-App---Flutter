@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../local/auth_local_storage.dart';
 import '../models/user_model.dart';
@@ -17,6 +18,7 @@ class AuthRepository {
     required String phone,
     required UserRole role,
     String? patientPhone,
+    String? profileImage,
   }) async {
     String? linkedUserId;
 
@@ -94,6 +96,7 @@ class AuthRepository {
       phone: phone,
       role: role,
       linkedUserId: linkedUserId,
+      profileImage: profileImage,
     );
 
     // حفظ بيانات المستخدم على Firestore
@@ -201,8 +204,57 @@ class AuthRepository {
   Future<void> logout() async {
     // Logout من Firebase
     await auth.signOut();
+    await GoogleSignIn().signOut();
 
     // امسح المستخدم من Hive
     await AuthLocalStorage.deleteUser();
+  }
+
+  Future<UserModel> signInWithGoogle({UserRole? role, bool createIfNotFound = false}) async {
+    final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      throw Exception('تم إلغاء تسجيل الدخول بواسطة جوجل');
+    }
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    final UserCredential userCredential = await auth.signInWithCredential(credential);
+    final firebaseUser = userCredential.user;
+
+    if (firebaseUser == null) {
+      throw Exception('فشل تسجيل الدخول بواسطة جوجل');
+    }
+
+    final doc = await firestore.collection('users').doc(firebaseUser.uid).get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      final user = UserModel.fromJson(data);
+      await AuthLocalStorage.saveUser(user);
+      return user;
+    } else {
+      if (createIfNotFound) {
+        final user = UserModel(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'مستخدم جوجل',
+          email: firebaseUser.email ?? '',
+          phone: firebaseUser.phoneNumber ?? '',
+          role: role ?? UserRole.patient,
+          linkedUserId: null,
+        );
+
+        await firestore.collection('users').doc(user.uid).set(user.toJson());
+        await AuthLocalStorage.saveUser(user);
+        return user;
+      } else {
+        await auth.signOut();
+        throw Exception('google_new_user');
+      }
+    }
   }
 }

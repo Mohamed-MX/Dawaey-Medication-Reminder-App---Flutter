@@ -1,3 +1,4 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_state.dart';
@@ -52,41 +53,34 @@ class _SignupScreenState extends State<SignupScreen> {
     final bool isCaregiver =
         widget.role == UserRole.caregiver;
 
-    return BlocProvider(
-      create: (context) {
-        return AuthCubit();
+    return BlocConsumer<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError) {
+          if (state.message.contains('google_new_user')) {
+            return;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.message,
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+
+        if (state is AuthSuccess) {
+          // Pop back to LoginScreen which will auto-route via BlocBuilder in main.dart
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       },
-      child: BlocConsumer<AuthCubit, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.message,
-                ),
-              ),
-            );
-          }
+      builder: (context, state) {
+        final cubit = context.read<AuthCubit>();
 
-          if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'تم إنشاء الحساب بنجاح',
-                ),
-              ),
-            );
-
-            // هنضيف هنا Navigation للـ Home
-            // لما نربط الـ Patient Home و Caregiver Home
-          }
-        },
-        builder: (context, state) {
-          final cubit = context.read<AuthCubit>();
-
-          return Directionality(
-            textDirection: TextDirection.rtl,
-            child: Scaffold(
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
               backgroundColor:
                   AppColors.authBackground,
 
@@ -127,6 +121,20 @@ class _SignupScreenState extends State<SignupScreen> {
 
                             const SizedBox(
                               height: 5,
+                            ),
+
+                            // Logo
+                            SizedBox(
+                              width: isTablet ? 180 : 145,
+                              height: isTablet ? 120 : 100,
+                              child: Image.asset(
+                                'assets/app icon.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+
+                            SizedBox(
+                              height: isTablet ? 35 : 25,
                             ),
 
                             // Title
@@ -521,6 +529,56 @@ class _SignupScreenState extends State<SignupScreen> {
                             const SizedBox(
                               height: 30,
                             ),
+
+                            // OR
+                            const Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    color: AppColors.dividerGrey,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                  ),
+                                  child: Text(
+                                    'أو',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Divider(
+                                    color: AppColors.dividerGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(
+                              height: 30,
+                            ),
+
+                            // Google Signup Button
+                            AuthButton(
+                              text: 'المتابعة باستخدام جوجل',
+                              isOutlined: true,
+                              icon: SvgPicture.asset(
+                                'assets/imgs/google_logo.svg',
+                                height: 24,
+                                width: 24,
+                              ),
+                              onPressed: () {
+                                cubit.signInWithGoogle(createIfNotFound: true);
+                              },
+                            ),
+
+                            const SizedBox(
+                              height: 16,
+                            ),
                           ],
                         ),
                       ),
@@ -531,7 +589,6 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 }

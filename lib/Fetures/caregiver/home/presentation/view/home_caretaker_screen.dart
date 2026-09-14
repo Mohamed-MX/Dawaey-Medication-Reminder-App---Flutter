@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -123,7 +125,26 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
             children: [
               InkWell(
                 onTap: () {
-                  // user select dropdown to select from list of patients
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('تسجيل الخروج'),
+                      content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج؟'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('إلغاء'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            context.read<AuthCubit>().logout();
+                          },
+                          child: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
                 },
                 child: Row(
                   children: [

@@ -9,7 +9,8 @@ import '../../../patients/presentation/cubit/patients_state.dart';
 import '../../../patients/data/model/patient_model.dart';
 
 class AddMedicationScreen extends StatefulWidget {
-  const AddMedicationScreen({super.key});
+  final MedicationModel? editMedication;
+  const AddMedicationScreen({super.key, this.editMedication});
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -30,6 +31,34 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     final patientState = context.read<PatientsCubit>().state;
     if (patientState is PatientsLoaded) {
        selectedPatientId = patientState.selectedPatientId ?? patientState.patients.first.id;
+    }
+
+    if (widget.editMedication != null) {
+      final med = widget.editMedication!;
+      selectedPatientId = med.patientId;
+      nameController.text = med.medicationName;
+      doseController.text = med.dosage;
+      selectedUsageMethod = med.administrationRoute;
+      selectedFrequency = _frequencyToStringReverse(med.frequency);
+      startSelectedDate = med.startDate;
+      endSelectedDate = med.endDate;
+      remainingDosesController.text = med.remainingDoses.toString();
+      pillsLeftController.text = med.remainingMedicationAmount.toString();
+      notesController.text = med.notes;
+
+      for (int i = 0; i < med.intakeTimes.length && i < selectedTimes.length; i++) {
+        selectedTimes[i] = med.intakeTimes[i];
+      }
+    }
+  }
+
+  String _frequencyToStringReverse(MedicationFrequency freq) {
+    switch (freq) {
+      case MedicationFrequency.onceDaily: return 'مرة واحدة يوميًا';
+      case MedicationFrequency.twiceDaily: return 'مرتين يوميًا';
+      case MedicationFrequency.threeTimesDaily: return 'ثلاث مرات يوميًا';
+      case MedicationFrequency.fourTimesDaily: return 'أربع مرات يوميًا';
+      default: return 'مرة واحدة يوميًا';
     }
   }
 
@@ -232,7 +261,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   
                   final medId = DateTime.now().millisecondsSinceEpoch.toString();
                   final newMed = MedicationModel(
-                    id: medId,
+                    id: widget.editMedication?.id ?? medId,
                     patientId: selectedPatientId ?? 'user_1',
                     medicationName: name,
                     administrationRoute: selectedUsageMethod,
@@ -244,10 +273,14 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                     remainingDoses: int.tryParse(remainingDosesController.text) ?? 0,
                     remainingMedicationAmount: int.tryParse(pillsLeftController.text) ?? 0,
                     notes: notesController.text,
-                    status: MedicationStatus.active,
+                    status: widget.editMedication?.status ?? MedicationStatus.active,
                   );
 
-                  context.read<MedicationsCubit>().addMedication(newMed);
+                  if (widget.editMedication != null) {
+                    context.read<MedicationsCubit>().updateMedication(newMed);
+                  } else {
+                    context.read<MedicationsCubit>().addMedication(newMed);
+                  }
                   Navigator.of(context).pop();
                 } else {
                   _nextPage();
