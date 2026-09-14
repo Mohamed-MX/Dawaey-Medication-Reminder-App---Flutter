@@ -6,6 +6,7 @@ import '../../data/model/medication_model.dart';
 import '../../data/model/doise_model.dart';
 import 'medications_state.dart';
 import '../../../Auth/data/local/auth_local_storage.dart';
+import '../../services/notification_service.dart';
 
 class MedicationsCubit extends Cubit<MedicationsState> {
   // final Box<MedicationModel> _medicationsBox;
@@ -21,7 +22,13 @@ class MedicationsCubit extends Cubit<MedicationsState> {
   List<MedicationDoseModel> _doses = [];
 
   // MedicationsCubit(this._medicationsBox, this._dosesBox) : super(MedicationsInitial());
-  MedicationsCubit() : super(MedicationsInitial());
+  MedicationsCubit() : super(MedicationsInitial()) {
+    _initNotifications();
+  }
+
+  void _initNotifications() async {
+    await NotificationService().init();
+  }
 
   String? _getUid() {
     return AuthLocalStorage.getUser()?.uid;
@@ -130,6 +137,14 @@ class MedicationsCubit extends Cubit<MedicationsState> {
            );
            final doseRef = _firestore.collection('users').doc(uid).collection('doses').doc(doseId);
            batch.set(doseRef, dose.toMap());
+           
+           final scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+           NotificationService().scheduleMedicationReminder(
+             doseId: doseId,
+             title: 'Time for your medication!',
+             body: 'It is time to take ${medication.dosage} of ${medication.medicationName}',
+             scheduledDate: scheduledDate,
+           );
         }
       }
       
@@ -167,6 +182,7 @@ class MedicationsCubit extends Cubit<MedicationsState> {
       for (var dose in dosesToDelete) {
         final doseRef = _firestore.collection('users').doc(uid).collection('doses').doc(dose.id);
         batch.delete(doseRef);
+        NotificationService().cancelNotification(dose.id);
       }
       
       await batch.commit();
@@ -187,6 +203,24 @@ class MedicationsCubit extends Cubit<MedicationsState> {
           
       final medRef = _firestore.collection('users').doc(uid).collection('medications').doc(id);
       await medRef.update({'status': newStatus.name});
+
+      if (newStatus == MedicationStatus.stopped) {
+         final futureDoses = _doses.where((d) => d.medicationId == id && d.status == DoseStatus.pending);
+         for (var dose in futureDoses) {
+             NotificationService().cancelNotification(dose.id);
+         }
+      } else {
+         final futureDoses = _doses.where((d) => d.medicationId == id && d.status == DoseStatus.pending);
+         for (var dose in futureDoses) {
+             final scheduledDate = DateTime(dose.date.year, dose.date.month, dose.date.day, dose.time.hour, dose.time.minute);
+             NotificationService().scheduleMedicationReminder(
+                doseId: dose.id,
+                title: 'Time for your medication!',
+                body: 'It is time to take ${med.dosage} of ${med.medicationName}',
+                scheduledDate: scheduledDate,
+             );
+         }
+      }
     } catch (e) {
       emit(MedicationsError("Failed to toggle medication status: $e"));
     }
@@ -213,6 +247,7 @@ class MedicationsCubit extends Cubit<MedicationsState> {
       for (var dose in futureDosesToDelete) {
         final doseRef = _firestore.collection('users').doc(uid).collection('doses').doc(dose.id);
         batch.delete(doseRef);
+        NotificationService().cancelNotification(dose.id);
       }
 
       final endDate = medication.endDate.isAfter(medication.startDate) 
@@ -236,6 +271,14 @@ class MedicationsCubit extends Cubit<MedicationsState> {
            );
            final doseRef = _firestore.collection('users').doc(uid).collection('doses').doc(doseId);
            batch.set(doseRef, dose.toMap());
+
+           final scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+           NotificationService().scheduleMedicationReminder(
+             doseId: doseId,
+             title: 'Time for your medication!',
+             body: 'It is time to take ${medication.dosage} of ${medication.medicationName}',
+             scheduledDate: scheduledDate,
+           );
         }
       }
 
