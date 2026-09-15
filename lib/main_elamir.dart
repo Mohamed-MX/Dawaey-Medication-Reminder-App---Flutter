@@ -64,15 +64,13 @@ void main() async {
       providers: [
         BlocProvider(
           create: (context) {
-            return PatientsCubit()
-              ..loadPatients();
+            return PatientsCubit();
           },
         ),
 
         BlocProvider(
           create: (context) {
-            return MedicationsCubit()
-              ..loadMedications();
+            return MedicationsCubit();
           },
         ),
 

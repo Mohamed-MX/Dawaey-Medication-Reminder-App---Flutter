@@ -1,18 +1,26 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
+import 'package:dawaey/Fetures/medications/data/model/medication_model.dart';
+import 'package:dawaey/Fetures/medications/presentation/cubit/medications_cubit.dart';
 import 'package:dawaey/Fetures/medications/widgets/calender.dart';
+import 'package:dawaey/services/rxnorm_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../cubit/medications_cubit.dart';
-import '../../data/model/medication_model.dart';
-import '../../data/model/doise_model.dart';
-import '../../../patients/presentation/cubit/patients_cubit.dart';
-import '../../../patients/presentation/cubit/patients_state.dart';
-import '../../../patients/data/model/patient_model.dart';
-import 'dart:async';
-import '../../services/rxnorm_service.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   final MedicationModel? editMedication;
-  const AddMedicationScreen({super.key, this.editMedication});
+  final String? targetPatientId;
+  final String? targetPatientName;
+
+  const AddMedicationScreen({
+    super.key,
+    this.editMedication,
+    this.targetPatientId,
+    this.targetPatientName,
+  });
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -22,25 +30,29 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
-  DateTime? startSelectedDate ;
-  DateTime? endSelectedDate ;
+
+  DateTime? startSelectedDate;
+  DateTime? endSelectedDate;
   List<TimeOfDay?> selectedTimes = List.filled(4, null);
+
   String? selectedPatientId;
+  final TextEditingController patientNameController = TextEditingController();
+
   final RxNormService _rxNormService = RxNormService();
-  List<String> _suggestions = [];
+  final List<String> _suggestions = [];
   bool _isLoadingSuggestions = false;
+  String? _suggestionsError;
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    final patientState = context.read<PatientsCubit>().state;
-    if (patientState is PatientsLoaded) {
-       selectedPatientId = patientState.selectedPatientId ?? patientState.patients.first.id;
-    }
+
+    patientNameController.text = 'جاري تحميل اسم المريض...';
 
     if (widget.editMedication != null) {
       final med = widget.editMedication!;
+
       selectedPatientId = med.patientId;
       nameController.text = med.medicationName;
       doseController.text = med.dosage;
@@ -52,9 +64,97 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       pillsLeftController.text = med.remainingMedicationAmount.toString();
       notesController.text = med.notes;
 
-      for (int i = 0; i < med.intakeTimes.length && i < selectedTimes.length; i++) {
+      for (
+        int i = 0;
+        i < med.intakeTimes.length && i < selectedTimes.length;
+        i++
+      ) {
         selectedTimes[i] = med.intakeTimes[i];
       }
+    }
+
+    _loadTargetPatient();
+  }
+
+  Future<void> _loadTargetPatient() async {
+    final currentUser = context.read<AuthCubit>().currentUser;
+
+    String? patientId;
+
+    if (widget.targetPatientId != null &&
+        widget.targetPatientId!.trim().isNotEmpty) {
+      patientId = widget.targetPatientId!.trim();
+    } else if (widget.editMedication != null) {
+      patientId = widget.editMedication!.patientId;
+    } else if (currentUser != null &&
+        currentUser.role == UserRole.patient) {
+      patientId = currentUser.uid;
+    } else if (currentUser != null &&
+        currentUser.role == UserRole.caregiver) {
+      patientId = currentUser.linkedUserId;
+    }
+
+    if (patientId == null || patientId.isEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        selectedPatientId = null;
+        patientNameController.text = 'تعذر تحديد المريض';
+      });
+      return;
+    }
+
+    selectedPatientId = patientId;
+
+    final passedName = widget.targetPatientName?.trim();
+    if (passedName != null && passedName.isNotEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = passedName;
+      });
+      return;
+    }
+
+    if (currentUser != null && currentUser.uid == patientId) {
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = currentUser.name;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(patientId)
+          .get();
+
+      if (!mounted) return;
+
+      if (!doc.exists || doc.data() == null) {
+        setState(() {
+          patientNameController.text = 'المريض غير موجود';
+        });
+        return;
+      }
+
+      final patientName =
+          (doc.data()!['name'] ?? '').toString().trim();
+
+      setState(() {
+        patientNameController.text =
+            patientName.isEmpty ? 'المريض' : patientName;
+      });
+    } catch (e) {
+      debugPrint('Load patient name error: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = 'تعذر تحميل اسم المريض';
+      });
     }
   }
 
@@ -81,6 +181,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    patientNameController.dispose();
     nameController.dispose();
     doseController.dispose();
     remainingDosesController.dispose();
@@ -266,10 +367,20 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                     return;
                   }
                   
+                  if (selectedPatientId == null ||
+                      selectedPatientId!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تعذر تحديد المريض صاحب الدواء'),
+                      ),
+                    );
+                    return;
+                  }
+
                   final medId = DateTime.now().millisecondsSinceEpoch.toString();
                   final newMed = MedicationModel(
                     id: widget.editMedication?.id ?? medId,
-                    patientId: selectedPatientId ?? 'user_1',
+                    patientId: selectedPatientId!,
                     medicationName: name,
                     administrationRoute: selectedUsageMethod,
                     dosage: doseController.text.trim(),
@@ -340,77 +451,166 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('لمن هذا الدواء؟', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-          const SizedBox(height: 8),
-          BlocBuilder<PatientsCubit, PatientsState>(
-            builder: (context, state) {
-              if (state is PatientsLoaded) {
-                return DropdownButtonFormField<String>(
-                  value: selectedPatientId,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                  ),
-                  items: state.patients.map((p) => DropdownMenuItem(value: p.id, child: Text('${p.name} (${p.relationship})'))).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      selectedPatientId = val;
-                    });
-                  },
-                );
-              }
-              return const CircularProgressIndicator();
-            },
+          const Text(
+            'لمن هذا الدواء؟',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
           ),
+          const SizedBox(height: 8),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border.all(
+                color: Colors.grey.shade300,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              patientNameController.text,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 24),
-          const Text('اسم الدواء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'اسم الدواء',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade50),
-            child: Icon(Icons.medication, size: 50, color: Colors.blue.shade300),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: Icon(
+              Icons.medication,
+              size: 50,
+              color: Colors.blue.shade300,
+            ),
           ),
           const SizedBox(height: 32),
-          Align(
+          const Align(
             alignment: Alignment.centerRight,
-            child: const Text('اسم الدواء', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: Text(
+              'اسم الدواء',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: nameController,
             onChanged: _onDrugNameChanged,
             decoration: InputDecoration(
-              hintText: 'مثال: أموكسيسيلين',
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+              hintText: 'مثال: amoxicillin',
+              prefixIcon: const Icon(
+                Icons.search,
+                color: Colors.grey,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade300,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade300,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+
           if (_isLoadingSuggestions)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                    SizedBox(width: 12),
-                    Text('جاري البحث عن الأدوية...', style: TextStyle(color: Color(0xFF1B363F))),
-                  ],
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Text('جاري البحث عن الأدوية...'),
+                ],
+              ),
+            )
+          else if (_suggestionsError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _suggestionsError!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 13,
                 ),
               ),
             )
           else if (_suggestions.isNotEmpty) ...[
-            Align(
+            const Align(
               alignment: Alignment.centerRight,
-              child: const Text('أدوية مقترحة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+              child: Text(
+                'اقتراحات من RxNorm',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
-            ..._suggestions.map((suggestion) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _buildSuggestion(suggestion),
-                )),
+            ..._suggestions.map(
+              (medicineName) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildApiSuggestion(medicineName),
+              ),
+            ),
+          ] else ...[
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'أو اختر من الأدوية الشائعة',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildCommonMed('Metformin'),
+            const SizedBox(height: 12),
+            _buildCommonMed('Amoxicillin'),
+            const SizedBox(height: 12),
+            _buildCommonMed('Omeprazole'),
           ],
         ],
       ),
@@ -418,44 +618,130 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   }
 
   void _onDrugNameChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
-    if (query.trim().isEmpty) {
+    _debounce?.cancel();
+
+    final value = query.trim();
+
+    if (value.length < 2) {
       setState(() {
-        _suggestions = [];
+        _suggestions.clear();
         _isLoadingSuggestions = false;
+        _suggestionsError = null;
       });
       return;
     }
 
-    setState(() {
-      _isLoadingSuggestions = true;
-    });
+    _debounce = Timer(
+      const Duration(milliseconds: 450),
+      () async {
+        if (!mounted) return;
 
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
-      final results = await _rxNormService.searchMedicine(query);
-      if (mounted) {
         setState(() {
-          _suggestions = results;
-          _isLoadingSuggestions = false;
+          _isLoadingSuggestions = true;
+          _suggestionsError = null;
         });
-      }
-    });
+
+        try {
+          final results = await _rxNormService.searchMedicine(value);
+
+          if (!mounted) return;
+
+          setState(() {
+            _suggestions
+              ..clear()
+              ..addAll(results);
+            _isLoadingSuggestions = false;
+          });
+        } catch (e) {
+          debugPrint('RxNorm error: $e');
+
+          if (!mounted) return;
+
+          setState(() {
+            _suggestions.clear();
+            _isLoadingSuggestions = false;
+            _suggestionsError =
+                'تعذر تحميل اقتراحات الأدوية. تأكد من الإنترنت.';
+          });
+        }
+      },
+    );
   }
 
-  Widget _buildSuggestion(String name) {
+  Widget _buildApiSuggestion(String medicineName) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          nameController.text = medicineName;
+          nameController.selection = TextSelection.collapsed(
+            offset: medicineName.length,
+          );
+          _suggestions.clear();
+          _suggestionsError = null;
+        });
+
+        FocusScope.of(context).unfocus();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Colors.teal.shade200,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.medication_outlined,
+              color: Colors.teal,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                medicineName,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommonMed(String name) {
     return InkWell(
       onTap: () {
         setState(() {
           nameController.text = name;
-          _suggestions = [];
-          FocusScope.of(context).unfocus();
+          nameController.selection = TextSelection.collapsed(
+            offset: name.length,
+          );
+          _suggestions.clear();
+          _suggestionsError = null;
         });
+
+        FocusScope.of(context).unfocus();
       },
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(
+            color: Colors.grey.shade300,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -464,14 +750,24 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F)),
-                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
               ),
             ),
             Container(
-              decoration: BoxDecoration(color: Colors.teal.shade100, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade100,
+                shape: BoxShape.circle,
+              ),
               padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.check, color: Colors.teal, size: 20),
+              child: const Icon(
+                Icons.add,
+                color: Colors.teal,
+                size: 20,
+              ),
             ),
           ],
         ),
