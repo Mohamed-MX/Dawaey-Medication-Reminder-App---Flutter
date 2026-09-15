@@ -20,8 +20,7 @@ class AuthUnauthenticated extends AuthState {}
 
 class AuthRememberMeChanged extends AuthState {}
 
-class AuthPasswordVisibilityChanged
-    extends AuthState {}
+class AuthPasswordVisibilityChanged extends AuthState {}
 
 class AuthImageSelected extends AuthState {
   final Uint8List imageBytes;

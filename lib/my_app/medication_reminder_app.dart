@@ -1,23 +1,29 @@
 import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_state.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/login_screen.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/role_selection_screen.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/signup_screen.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/onboarding_screen.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/splash_screen.dart';
-
+import 'package:dawaey/Fetures/home/screens/home_caretaker_screen.dart';
 import 'package:dawaey/Fetures/history/presentation/view/history_screen.dart';
+
+// Patient Home
+import 'package:dawaey/Fetures/patient/home/presentation/view/patient_home_screen.dart';
 
 import 'package:dawaey/Fetures/medications/data/model/medication_model.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/add_medication_screen.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
+import 'package:dawaey/Fetures/patient/home/presentation/view/patient_main_screen.dart';
 
 import 'package:dawaey/core/routes/app_routes.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:month_year_picker/month_year_picker.dart';
 
-import '../Fetures/caregiver/home/presentation/view/home_caretaker_screen.dart';
 import '../Fetures/Auth/presentation/view/auth_wrapper.dart';
 
 class MedicationReminderApp extends StatelessWidget {
@@ -46,15 +52,16 @@ class MedicationReminderApp extends StatelessWidget {
         },
 
         '/history': (context) {
-          return HistoryScreen(
-            currentUser: UserModel(
-              uid: 'OyMWoY97UBTR0tUUMNbTrpSseM2',
-              email: 'heiarayashiki@gmail.com',
-              name: 'Mohamed MX',
-              phone: '',
-              profileImage: null,
-              role: UserRole.patient,
-            ),
+          return BlocBuilder<AuthCubit, AuthState>(
+            builder: (context, state) {
+              if (state is AuthSuccess) {
+                return HistoryScreen(
+                  currentUser: state.user,
+                );
+              }
+
+              return const LoginScreen();
+            },
           );
         },
 
@@ -87,8 +94,21 @@ class MedicationReminderApp extends StatelessWidget {
         },
 
         AppRoutes.caregiverHome: (context) {
-          return const home_caretaker_screen();
+          return home_caretaker_screen();
         },
+
+        AppRoutes.patientHome: (context) {
+  final user =
+      context.read<AuthCubit>().currentUser;
+
+  if (user == null) {
+    return const LoginScreen();
+  }
+
+  return PatientMainScreen(
+    currentUser: user,
+  );
+},
       },
 
       debugShowCheckedModeBanner: false,

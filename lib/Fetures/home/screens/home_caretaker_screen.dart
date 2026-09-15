@@ -9,6 +9,8 @@ import '../../patients/presentation/cubit/patients_cubit.dart';
 import '../../patients/presentation/cubit/patients_state.dart';
 import '../../patients/data/model/patient_model.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_state.dart';
+import 'package:dawaey/core/routes/app_routes.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -31,9 +33,22 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
   Widget build(BuildContext context) {
     // Wrapping the entire Scaffold in Directionality RTL to make the BottomAppBar
     // arrange children from right to left naturally.
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            AppRoutes.login,
+            (route) => false,
+          );
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -129,6 +144,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
