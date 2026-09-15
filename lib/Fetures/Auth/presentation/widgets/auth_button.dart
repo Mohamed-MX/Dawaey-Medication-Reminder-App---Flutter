@@ -28,10 +28,8 @@ class AuthButton extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 backgroundColor: AppColors.authBackground,
 
-                // لون كلمة إنشاء حساب
                 foregroundColor: AppColors.primaryBlue,
 
-                // البوردر رمادي
                 side: const BorderSide(
                   color: AppColors.authBorder,
                   width: 1.5,
@@ -62,7 +60,6 @@ class AuthButton extends StatelessWidget {
           : ElevatedButton(
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
-                // زر تسجيل الدخول أزرق
                 backgroundColor: AppColors.primaryBlue,
 
                 foregroundColor: Colors.white,
@@ -92,7 +89,6 @@ class AuthButton extends StatelessWidget {
                         Text(
                           text,
                           style: const TextStyle(
-                            // الكلام داخل الزر أبيض
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

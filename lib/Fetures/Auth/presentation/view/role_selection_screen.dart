@@ -1,6 +1,7 @@
 import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view/signup_screen.dart';
 import 'package:dawaey/Fetures/Auth/presentation/widgets/role_selection_card.dart';
+import 'package:dawaey/core/routes/app_routes.dart';
 import 'package:dawaey/core/theme/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +20,8 @@ class RoleSelectionScreen extends StatelessWidget {
       textDirection: TextDirection.rtl,
 
       child: Scaffold(
-  backgroundColor: AppColors.authBackground,
+        backgroundColor: AppColors.authBackground,
+
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -35,7 +37,6 @@ class RoleSelectionScreen extends StatelessWidget {
 
                 child: Column(
                   children: [
-                    // Back Button
                     Align(
                       alignment: Alignment.centerRight,
 
@@ -58,7 +59,6 @@ class RoleSelectionScreen extends StatelessWidget {
                       height: isTablet ? 55 : 45,
                     ),
 
-                    // Title
                     Text(
                       'من أنت في دوائي؟',
 
@@ -77,7 +77,6 @@ class RoleSelectionScreen extends StatelessWidget {
                       height: 12,
                     ),
 
-                    // Subtitle
                     Text(
                       'اختر الدور المناسب لك',
 
@@ -94,10 +93,9 @@ class RoleSelectionScreen extends StatelessWidget {
                       height: isTablet ? 60 : 50,
                     ),
 
-                    // Patient
                     RoleSelectionCard(
                       imagePath:
-                          'assets/assets_auth/Avatar_Elderly.svg',
+                          'assets/auth_assets/Avatar_Elderly.svg',
 
                       title: 'أنا باخد أدوية',
 
@@ -105,16 +103,9 @@ class RoleSelectionScreen extends StatelessWidget {
                           'أدير أدويتي ومواعيدي بسهولة',
 
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushNamed(
                           context,
-
-                          MaterialPageRoute(
-                            builder: (context) {
-                              return const SignupScreen(
-                                role: UserRole.patient,
-                              );
-                            },
-                          ),
+                          AppRoutes.patientSignup,
                         );
                       },
                     ),
@@ -123,10 +114,9 @@ class RoleSelectionScreen extends StatelessWidget {
                       height: 20,
                     ),
 
-                    // Caregiver
                     RoleSelectionCard(
                       imagePath:
-                          'assets/assets_auth/Avatar_Family.svg',
+                          'assets/auth_assets/Avatar_Family.svg',
 
                       title: 'بتابع حد من عيلتي',
 
@@ -134,16 +124,9 @@ class RoleSelectionScreen extends StatelessWidget {
                           'أتابع وأدعم أحد أفراد عائلتي',
 
                       onTap: () {
-                        Navigator.push(
+                        Navigator.pushNamed(
                           context,
-
-                          MaterialPageRoute(
-                            builder: (context) {
-                              return const SignupScreen(
-                                role: UserRole.caregiver,
-                              );
-                            },
-                          ),
+                          AppRoutes.caregiverSignup,
                         );
                       },
                     ),

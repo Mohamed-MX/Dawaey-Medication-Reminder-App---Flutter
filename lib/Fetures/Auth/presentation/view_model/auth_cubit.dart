@@ -1,42 +1,43 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/data/repositories/auth_repository.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_state.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../data/models/user_model.dart';
-import '../../data/repositories/auth_repository.dart';
-import 'auth_state.dart';
-
 class AuthCubit extends Cubit<AuthState> {
-  final AuthRepository repository = AuthRepository();
-
   AuthCubit() : super(AuthInitial());
 
-  // Login UI
+  final AuthRepository repository = AuthRepository();
+
   bool rememberMe = false;
+
   bool hidePassword = true;
 
-  // Profile image
-  String? profileImageBase64;
   Uint8List? profileImageBytes;
 
-  // تغيير Remember Me
+  String? profileImageBase64;
+
   void changeRememberMe(bool value) {
     rememberMe = value;
 
-    emit(AuthRememberMeChanged());
+    emit(
+      AuthRememberMeChanged(),
+    );
   }
 
-  // إظهار وإخفاء كلمة المرور
   void changePasswordVisibility() {
     hidePassword = !hidePassword;
 
-    emit(AuthPasswordVisibilityChanged());
+    emit(
+      AuthPasswordVisibilityChanged(),
+    );
   }
 
-  // اختيار صورة من Gallery
   Future<void> pickProfileImage() async {
     final ImagePicker picker = ImagePicker();
 
@@ -51,47 +52,64 @@ class AuthCubit extends Cubit<AuthState> {
       return;
     }
 
-    final bytes = await image.readAsBytes();
+    final Uint8List bytes =
+        await image.readAsBytes();
 
     profileImageBytes = bytes;
 
-    profileImageBase64 = base64Encode(bytes);
+    profileImageBase64 =
+        base64Encode(bytes);
 
-    emit(AuthImageSelected(bytes));
+    emit(
+      AuthImageSelected(
+        bytes,
+      ),
+    );
   }
 
-  // حذف صورة البروفايل
   void removeProfileImage() {
     profileImageBytes = null;
+
     profileImageBase64 = null;
 
-    emit(AuthImageRemoved());
+    emit(
+      AuthImageRemoved(),
+    );
   }
 
-  // Login
   Future<void> login({
     required String email,
     required String password,
   }) async {
-    emit(AuthLoading());
+    emit(
+      AuthLoading(),
+    );
 
     try {
-      final user = await repository.login(
+      final user =
+          await repository.login(
         email: email,
         password: password,
       );
 
-      emit(AuthSuccess(user));
+      emit(
+        AuthSuccess(
+          user,
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       emit(
         AuthError(
-          e.message ?? 'حدث خطأ أثناء تسجيل الدخول',
+          e.message ??
+              'حدث خطأ أثناء تسجيل الدخول',
         ),
       );
     } catch (e) {
       emit(
         AuthError(
-          e.toString().replaceAll(
+          e
+              .toString()
+              .replaceAll(
                 'Exception: ',
                 '',
               ),
@@ -100,7 +118,6 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // Signup
   Future<void> signUp({
     required String name,
     required String email,
@@ -109,30 +126,41 @@ class AuthCubit extends Cubit<AuthState> {
     required UserRole role,
     String? patientPhone,
   }) async {
-    emit(AuthLoading());
+    emit(
+      AuthLoading(),
+    );
 
     try {
-      final user = await repository.signUp(
+      final user =
+          await repository.signUp(
         name: name,
         email: email,
         password: password,
         phone: phone,
         role: role,
         patientPhone: patientPhone,
-        profileImage: profileImageBase64,
+        profileImage:
+            profileImageBase64,
       );
 
-      emit(AuthSuccess(user));
+      emit(
+        AuthSuccess(
+          user,
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       emit(
         AuthError(
-          e.message ?? 'حدث خطأ أثناء إنشاء الحساب',
+          e.message ??
+              'حدث خطأ أثناء إنشاء الحساب',
         ),
       );
     } catch (e) {
       emit(
         AuthError(
-          e.toString().replaceAll(
+          e
+              .toString()
+              .replaceAll(
                 'Exception: ',
                 '',
               ),
@@ -141,60 +169,49 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // Google Login / Signup
-  Future<void> signInWithGoogle({
-    UserRole? role,
-    bool createIfNotFound = false,
-  }) async {
-    emit(AuthLoading());
-
-    try {
-      final user = await repository.signInWithGoogle(
-        role: role,
-        createIfNotFound: createIfNotFound,
-      );
-      emit(AuthSuccess(user));
-    } on FirebaseAuthException catch (e) {
-      emit(AuthError(e.message ?? 'حدث خطأ أثناء المتابعة بجوجل'));
-    } catch (e) {
-      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-    }
-  }
-
-  // Auto Login
   Future<void> checkCurrentUser() async {
-    emit(AuthLoading());
+    emit(
+      AuthLoading(),
+    );
 
     try {
-      final user = await repository.getCurrentUser();
+      final user =
+          await repository.getCurrentUser();
 
-      if (user == null) {
-        emit(AuthUnauthenticated());
-        return;
+      if (user != null) {
+        emit(
+          AuthSuccess(
+            user,
+          ),
+        );
+      } else {
+        emit(
+          AuthUnauthenticated(),
+        );
       }
-
-      emit(AuthSuccess(user));
     } catch (e) {
       emit(
-        AuthError(
-          'حدث خطأ أثناء تحميل بيانات المستخدم',
-        ),
+        AuthUnauthenticated(),
       );
     }
   }
 
-  // Logout
   Future<void> logout() async {
-    emit(AuthLoading());
-
     try {
       await repository.logout();
 
-      emit(AuthUnauthenticated());
+      emit(
+        AuthUnauthenticated(),
+      );
     } catch (e) {
       emit(
         AuthError(
-          'حدث خطأ أثناء تسجيل الخروج',
+          e
+              .toString()
+              .replaceAll(
+                'Exception: ',
+                '',
+              ),
         ),
       );
     }

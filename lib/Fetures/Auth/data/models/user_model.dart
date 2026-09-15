@@ -14,8 +14,6 @@ class UserModel {
 
   final UserRole role;
 
-  // صورة المستخدم بعد تحويلها لـ Base64
-  // nullable لأن الصورة اختيارية
   final String? profileImage;
 
   UserModel({

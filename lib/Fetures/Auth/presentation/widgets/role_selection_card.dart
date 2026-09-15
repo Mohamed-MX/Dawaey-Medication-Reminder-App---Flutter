@@ -48,7 +48,6 @@ class RoleSelectionCard extends StatelessWidget {
 
         child: Row(
           children: [
-            // الصورة
             SizedBox(
               width: 105,
               height: 125,
@@ -63,7 +62,6 @@ class RoleSelectionCard extends StatelessWidget {
               width: 22,
             ),
 
-            // الكلام
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

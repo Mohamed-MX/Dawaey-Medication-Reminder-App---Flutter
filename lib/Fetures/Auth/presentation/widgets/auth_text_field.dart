@@ -53,7 +53,6 @@ class AuthTextField extends StatelessWidget {
 
         fillColor: AppColors.authBackground,
 
-        // الإيميل أو القفل أزرق
         prefixIcon: Icon(
           icon,
           color: AppColors.primaryBlue,
@@ -70,7 +69,6 @@ class AuthTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
         ),
 
-        // البوردر الطبيعي رمادي
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(
@@ -79,7 +77,6 @@ class AuthTextField extends StatelessWidget {
           ),
         ),
 
-        // لما تدوس عليه يبقى أزرق
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(

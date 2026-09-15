@@ -1,9 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
-import '../local/auth_local_storage.dart';
-import '../models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/data/local/auth_local_storage.dart';
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
 
 class AuthRepository {
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -20,60 +19,6 @@ class AuthRepository {
     String? patientPhone,
     String? profileImage,
   }) async {
-    String? linkedUserId;
-
-    // لو المستخدم Patient
-    if (role == UserRole.patient) {
-      final result = await firestore
-          .collection('users')
-          .where(
-            'phone',
-            isEqualTo: phone,
-          )
-          .where(
-            'role',
-            isEqualTo: 'patient',
-          )
-          .get();
-
-      if (result.docs.isNotEmpty) {
-        throw Exception(
-          'رقم الهاتف ده مسجل قبل كده',
-        );
-      }
-    }
-
-    // لو المستخدم Caregiver
-    if (role == UserRole.caregiver) {
-      if (patientPhone == null ||
-          patientPhone.isEmpty) {
-        throw Exception(
-          'اكتب رقم هاتف المريض',
-        );
-      }
-
-      final result = await firestore
-          .collection('users')
-          .where(
-            'phone',
-            isEqualTo: patientPhone,
-          )
-          .where(
-            'role',
-            isEqualTo: 'patient',
-          )
-          .get();
-
-      if (result.docs.isEmpty) {
-        throw Exception(
-          'لا يوجد مريض بهذا الرقم',
-        );
-      }
-
-      linkedUserId = result.docs.first.id;
-    }
-
-    // إنشاء الحساب على Firebase Authentication
     final credential =
         await auth.createUserWithEmailAndPassword(
       email: email,
@@ -88,36 +33,94 @@ class AuthRepository {
       );
     }
 
-    // إنشاء UserModel
-    final user = UserModel(
-      uid: firebaseUser.uid,
-      name: name,
-      email: email,
-      phone: phone,
-      role: role,
-      linkedUserId: linkedUserId,
-      profileImage: profileImage,
-    );
+    String? linkedUserId;
 
-    // حفظ بيانات المستخدم على Firestore
-    await firestore
-        .collection('users')
-        .doc(user.uid)
-        .set(
-          user.toJson(),
-        );
+    try {
+      if (role == UserRole.patient) {
+        final result = await firestore
+            .collection('users')
+            .where(
+              'phone',
+              isEqualTo: phone,
+            )
+            .where(
+              'role',
+              isEqualTo: 'patient',
+            )
+            .limit(1)
+            .get();
 
-    // حفظ نسخة Local في Hive
-    await AuthLocalStorage.saveUser(user);
+        if (result.docs.isNotEmpty) {
+          throw Exception(
+            'رقم الهاتف ده مسجل قبل كده',
+          );
+        }
+      }
 
-    return user;
+      if (role == UserRole.caregiver) {
+        if (patientPhone == null ||
+            patientPhone.trim().isEmpty) {
+          throw Exception(
+            'اكتب رقم هاتف المريض',
+          );
+        }
+
+        final result = await firestore
+            .collection('users')
+            .where(
+              'phone',
+              isEqualTo: patientPhone.trim(),
+            )
+            .where(
+              'role',
+              isEqualTo: 'patient',
+            )
+            .limit(1)
+            .get();
+
+        if (result.docs.isEmpty) {
+          throw Exception(
+            'لا يوجد مريض بهذا الرقم',
+          );
+        }
+
+        linkedUserId =
+            result.docs.first.id;
+      }
+
+      final user = UserModel(
+        uid: firebaseUser.uid,
+        name: name,
+        email: email,
+        phone: phone,
+        role: role,
+        linkedUserId: linkedUserId,
+        profileImage: profileImage,
+      );
+
+      await firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(
+            user.toJson(),
+          );
+
+      await AuthLocalStorage.saveUser(
+        user,
+      );
+
+      return user;
+    } catch (e) {
+      await firebaseUser.delete();
+
+      rethrow;
+    }
   }
 
   Future<UserModel> login({
     required String email,
     required String password,
   }) async {
-    // تسجيل الدخول باستخدام Firebase Authentication
     final credential =
         await auth.signInWithEmailAndPassword(
       email: email,
@@ -132,7 +135,6 @@ class AuthRepository {
       );
     }
 
-    // هات بيانات المستخدم من Firestore
     final document = await firestore
         .collection('users')
         .doc(firebaseUser.uid)
@@ -152,32 +154,26 @@ class AuthRepository {
       );
     }
 
-    // حول البيانات إلى UserModel
-    final user = UserModel.fromJson(data);
+    final user =
+        UserModel.fromJson(
+      data,
+    );
 
-    // احفظ نسخة Local
-    await AuthLocalStorage.saveUser(user);
+    await AuthLocalStorage.saveUser(
+      user,
+    );
 
     return user;
   }
 
   Future<UserModel?> getCurrentUser() async {
-    // هل Firebase عنده User مسجل دخول؟
-    final firebaseUser = auth.currentUser;
+    final firebaseUser =
+        auth.currentUser;
 
     if (firebaseUser == null) {
       return null;
     }
 
-    // جرب الأول تجيب المستخدم من Hive
-    final localUser = AuthLocalStorage.getUser();
-
-    if (localUser != null &&
-        localUser.uid == firebaseUser.uid) {
-      return localUser;
-    }
-
-    // لو مش موجود Local هاته من Firestore
     final document = await firestore
         .collection('users')
         .doc(firebaseUser.uid)
@@ -193,68 +189,21 @@ class AuthRepository {
       return null;
     }
 
-    final user = UserModel.fromJson(data);
+    final user =
+        UserModel.fromJson(
+      data,
+    );
 
-    // احفظه Local للمرة الجاية
-    await AuthLocalStorage.saveUser(user);
+    await AuthLocalStorage.saveUser(
+      user,
+    );
 
     return user;
   }
 
   Future<void> logout() async {
-    // Logout من Firebase
     await auth.signOut();
-    await GoogleSignIn().signOut();
 
-    // امسح المستخدم من Hive
     await AuthLocalStorage.deleteUser();
-  }
-
-  Future<UserModel> signInWithGoogle({UserRole? role, bool createIfNotFound = false}) async {
-    final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
-    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-    if (googleUser == null) {
-      throw Exception('تم إلغاء تسجيل الدخول بواسطة جوجل');
-    }
-
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    final OAuthCredential credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final UserCredential userCredential = await auth.signInWithCredential(credential);
-    final firebaseUser = userCredential.user;
-
-    if (firebaseUser == null) {
-      throw Exception('فشل تسجيل الدخول بواسطة جوجل');
-    }
-
-    final doc = await firestore.collection('users').doc(firebaseUser.uid).get();
-
-    if (doc.exists) {
-      final data = doc.data()!;
-      final user = UserModel.fromJson(data);
-      await AuthLocalStorage.saveUser(user);
-      return user;
-    } else {
-      if (createIfNotFound) {
-        final user = UserModel(
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName ?? 'مستخدم جوجل',
-          email: firebaseUser.email ?? '',
-          phone: firebaseUser.phoneNumber ?? '',
-          role: role ?? UserRole.patient,
-          linkedUserId: null,
-        );
-
-        await firestore.collection('users').doc(user.uid).set(user.toJson());
-        await AuthLocalStorage.saveUser(user);
-        return user;
-      } else {
-        await auth.signOut();
-        throw Exception('google_new_user');
-      }
-    }
   }
 }
