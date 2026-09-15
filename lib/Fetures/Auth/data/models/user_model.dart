@@ -14,6 +14,8 @@ class UserModel {
 
   final UserRole role;
 
+  final String? linkedUserId;
+
   final String? profileImage;
 
   UserModel({
@@ -22,7 +24,8 @@ class UserModel {
     required this.email,
     required this.phone,
     required this.role,
-    this.profileImage, String? linkedUserId,
+    this.linkedUserId,
+    this.profileImage,
   });
 
   factory UserModel.fromJson(
@@ -41,6 +44,8 @@ class UserModel {
           ? UserRole.patient
           : UserRole.caregiver,
 
+        linkedUserId: json['linkedUserId'],
+
       profileImage: json['profileImage'],
     );
   }
@@ -58,6 +63,8 @@ class UserModel {
       'role': role == UserRole.patient
           ? 'patient'
           : 'caregiver',
+
+        'linkedUserId': linkedUserId,
 
       'profileImage': profileImage,
     };

@@ -14,6 +14,9 @@ class AuthCubit extends Cubit<AuthState> {
 
   final AuthRepository repository = AuthRepository();
 
+  // اليوزر الحالي
+  UserModel? currentUser;
+
   bool rememberMe = false;
 
   bool hidePassword = true;
@@ -92,6 +95,9 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
       );
 
+      // نحفظ اليوزر
+      currentUser = user;
+
       emit(
         AuthSuccess(
           user,
@@ -143,6 +149,9 @@ class AuthCubit extends Cubit<AuthState> {
             profileImageBase64,
       );
 
+      // نحفظ اليوزر
+      currentUser = user;
+
       emit(
         AuthSuccess(
           user,
@@ -179,17 +188,24 @@ class AuthCubit extends Cubit<AuthState> {
           await repository.getCurrentUser();
 
       if (user != null) {
+        // نحفظ اليوزر في الـ Auto Login
+        currentUser = user;
+
         emit(
           AuthSuccess(
             user,
           ),
         );
       } else {
+        currentUser = null;
+
         emit(
           AuthUnauthenticated(),
         );
       }
     } catch (e) {
+      currentUser = null;
+
       emit(
         AuthUnauthenticated(),
       );
@@ -199,6 +215,9 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> logout() async {
     try {
       await repository.logout();
+
+      // نمسح اليوزر
+      currentUser = null;
 
       emit(
         AuthUnauthenticated(),
