@@ -2,7 +2,32 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
-enum MedicationFrequency { onceDaily, twiceDaily, threeTimesDaily, fourTimesDaily, onceWeekly }
+enum MedicationFrequency {
+  onceDaily,
+  twiceDaily,
+  threeTimesDaily,
+  fourTimesDaily,
+  onceWeekly;
+
+  String get arabicName {
+    switch (this) {
+      case MedicationFrequency.onceDaily:
+        return 'مرة يوميًا';
+
+      case MedicationFrequency.twiceDaily:
+        return 'مرتين يوميًا';
+
+      case MedicationFrequency.threeTimesDaily:
+        return '3 مرات يوميًا';
+
+      case MedicationFrequency.fourTimesDaily:
+        return '4 مرات يوميًا';
+
+      case MedicationFrequency.onceWeekly:
+        return 'مرة أسبوعيًا';
+    }
+  }
+}
 
 enum MedicationStatus { active, stopped }
 

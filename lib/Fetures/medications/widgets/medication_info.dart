@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class MedicationInfo extends StatelessWidget {
   const MedicationInfo({super.key , required this.label , required this.value});
   final String label ;
-  final String value;
+  final dynamic value;
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -17,7 +17,7 @@ class MedicationInfo extends StatelessWidget {
             Text(label,
               style: AppFonts.inter18RegularSoftMintGreen.copyWith(color: AppColors.BlueGray),
             ),
-            Text(value,
+            Text("${value}",
               style: AppFonts.inter30BoldDark.copyWith(fontSize: 18),
             ),
           ],

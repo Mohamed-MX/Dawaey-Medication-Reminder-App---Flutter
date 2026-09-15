@@ -1,29 +1,54 @@
+import 'package:dawaey/Fetures/medications/data/model/medication_model.dart';
 import 'package:dawaey/Fetures/medications/widgets/medication_action_sheets.dart';
 import 'package:dawaey/Fetures/medications/widgets/medication_info.dart';
 import 'package:dawaey/Fetures/medications/widgets/medication_success_dialogs.dart';
 import 'package:dawaey/core/theme/colors.dart';
 import 'package:dawaey/core/theme/fonts.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-class MedicationDetailsScreen extends StatefulWidget {
-  const MedicationDetailsScreen({super.key});
+class MedicationDetailsScreen extends StatelessWidget {
+  MedicationDetailsScreen({super.key , required this.medicien});
+  final MedicationModel medicien ;
+List<Map<String, String>> get medicationData => [
+  {
+    'label': 'الجرعة',
+    'value': medicien.dosage,
+  },
+  {
+    'label': 'معدل التكرار',
+    'value': medicien.frequency.arabicName,
+  },
+  {
+    'label': 'موعد الدواء',
+    'value':  medicien.intakeTimes.map((time) {
+      final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+      final minute = time.minute.toString().padLeft(2, '0');
+      final period = time.hour >= 12 ? 'م' : 'ص';
 
-  @override
-  State<MedicationDetailsScreen> createState() =>
-      _MedicationDetailsScreenState();
-}
-
-class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
-  final medicationData = const [
-    {'label': 'الجرعة', 'value': '5 مجم (قرص واحد)'},
-    {'label': 'معدل التكرار', 'value': 'معدل يومي'},
-    {'label': 'موعد الدواء', 'value': '9:00 ص'},
-    {'label': 'تاريخ البداية', 'value': '1 أبريل 2025'},
-    {'label': 'تاريخ الانتهاء', 'value': '31 ديسمبر 2025'},
-    {'label': 'الوصفة الطبية', 'value': '90 جرعة'},
-    {'label': 'ملاحظات', 'value': 'يؤخذ بعد الفطار'},
-  ];
-  void _showMedicationInfoDialog() {
+      return '$hour:$minute $period';
+    }).join(' - '),
+  },
+  {
+    'label': 'تاريخ البداية',
+    'value':
+        '${DateFormat('d MMMM yyyy' , 'ar').format(medicien.startDate)}',
+  },
+  {
+    'label': 'تاريخ الانتهاء',
+    'value':
+        '${DateFormat('d MMMM yyyy' , 'ar').format(medicien.endDate)}',
+  },
+  {
+    'label': 'المتبقي لديك',
+    'value': '${medicien.remainingDoses} جرعة',
+  },
+  {
+    'label': 'ملاحظات',
+    'value': medicien.notes,
+  },
+];
+  void _showMedicationInfoDialog(BuildContext context) {
   showDialog(
     context: context,
     builder: (context) {
@@ -42,8 +67,8 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
             itemCount: medicationData.length,
             itemBuilder: (context, index) {
               return MedicationInfo(
-                label: medicationData[index]['label']!,
-                value: medicationData[index]['value']!,
+                label: medicationData[index]['label'] as String,
+                value: medicationData[index]['value'],
               );
             },
           ),
@@ -68,7 +93,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
     return value * scale;
   }
 
-  Future<void> _showDeleteBottomSheet() async {
+  Future<void> _showDeleteBottomSheet(BuildContext context) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -82,12 +107,12 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
       },
     );
 
-    if (result == true && mounted) {
+    if (result == true && context.mounted) {
       showDeleteSuccessDialog(context, rs);
     }
   }
 
-  Future<void> _showPauseBottomSheet() async {
+  Future<void> _showPauseBottomSheet(BuildContext context) async {
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -101,7 +126,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
       },
     );
 
-    if (result != null && mounted) {
+    if (result != null && context.mounted) {
       showPauseSuccessDialog(
         context,
         rs,
@@ -208,7 +233,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
           child: isShortScreen
               ? Center(
                   child: ElevatedButton.icon(
-                    onPressed: _showMedicationInfoDialog,
+                    onPressed: (){_showMedicationInfoDialog(context);},
                     icon: Icon(
                       Icons.info_outline,
                       size: rs(context, 20),
@@ -306,7 +331,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
               // Delete Medication
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _showDeleteBottomSheet,
+                  onPressed: (){_showDeleteBottomSheet(context);},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.error,
                     minimumSize: Size(
@@ -344,7 +369,7 @@ class _MedicationDetailsScreenState extends State<MedicationDetailsScreen> {
               // Pause Medication
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _showPauseBottomSheet,
+                  onPressed: (){_showPauseBottomSheet(context);},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xff8BA0BC),
                     minimumSize: Size(

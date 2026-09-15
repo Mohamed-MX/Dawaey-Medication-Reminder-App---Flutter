@@ -1,46 +1,24 @@
 import 'package:date_picker_timeline/date_picker_widget.dart';
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/history/data/model/history_data_model.dart';
+import 'package:dawaey/Fetures/history/presentation/view_model/history_cubit.dart';
+import 'package:dawaey/Fetures/history/presentation/view_model/history_state.dart';
 import 'package:dawaey/Fetures/history/presentation/widgets/medician_card.dart';
 import 'package:dawaey/Fetures/medications/data/model/doise_model.dart';
 import 'package:dawaey/core/theme/colors.dart';
 import 'package:dawaey/core/theme/fonts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:month_year_picker/month_year_picker.dart';
 
-class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+class HistoryScreen extends StatelessWidget {
+  HistoryScreen({
+    super.key,
+    required this.currentUser,
+  });
 
-  @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
-}
-
-class _HistoryScreenState extends State<HistoryScreen> {
-  final List<Map<String, dynamic>> medicines = [
-    {
-      'name': 'أملوديب',
-      'status': DoseStatus.taken,
-      'dose': '5 مجم',
-      'time': TimeOfDay(hour: 9, minute: 0),
-      'primaryContainerColor': const Color(0xFFF3FAF6),
-      'secondaryContainerColor': const Color(0xFFE8F6EF),
-    },
-    {
-      'name': 'مينوكسيد',
-      'status': DoseStatus.missed,
-      'dose': '500 مجم',
-      'time': TimeOfDay(hour: 14, minute: 0),
-      'primaryContainerColor': const Color(0xFFFFF5F6),
-      'secondaryContainerColor': const Color(0xFFFDECEF),
-    },
-    {
-      'name': 'أتورفاستاتين',
-      'status': DoseStatus.pending,
-      'dose': '20 مجم',
-      'time': TimeOfDay(hour: 8, minute: 0),
-      'primaryContainerColor': const Color(0xFFF5F8FD),
-      'secondaryContainerColor': const Color(0xFFF0F4FA),
-    },
-  ];
+  final UserModel currentUser;
 
   double rs(BuildContext context, double value) {
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -49,17 +27,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return value * scale;
   }
 
-  DateTime requiredMonth =
-      DateTime(DateTime.now().year, DateTime.now().month);
+  Color getPrimaryColor(DoseStatus status) {
+    switch (status) {
+      case DoseStatus.taken:
+        return const Color(0xFFF3FAF6);
+      case DoseStatus.missed:
+        return const Color(0xFFFFF5F6);
+      case DoseStatus.pending:
+        return const Color(0xFFF5F8FD);
+    }
+  }
 
-  DateTime selected =
-      DateTime(DateTime.now().year, DateTime.now().month);
+  Color getSecondaryColor(DoseStatus status) {
+    switch (status) {
+      case DoseStatus.taken:
+        return const Color(0xFFE8F6EF);
+      case DoseStatus.missed:
+        return const Color(0xFFFDECEF);
+      case DoseStatus.pending:
+        return const Color(0xFFF0F4FA);
+    }
+  }
 
-  // ----------------------------------------------------------
-  // Medication Dialog
-  // ----------------------------------------------------------
+  Widget buildMedicationCard(HistoryDataModel item) {
+    return MedicianCard(
+      name: item.medication.medicationName,
+      dose: item.medication.dosage,
+      status: item.dose.status,
+      time: item.dose.time,
+      primeryContainerColor: getPrimaryColor(item.dose.status),
+      secondryContainerColor: getSecondaryColor(item.dose.status),
+    );
+  }
 
-  void showMedicinesDialog() {
+  void showMedicinesDialog(
+    BuildContext context,
+    List<HistoryDataModel> medicines,
+  ) {
     showDialog(
       context: context,
       builder: (context) {
@@ -77,16 +81,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               shrinkWrap: true,
               itemCount: medicines.length,
               itemBuilder: (context, index) {
-                return MedicianCard(
-                  name: medicines[index]['name'],
-                  dose: medicines[index]['dose'],
-                  status: medicines[index]['status'],
-                  time: medicines[index]['time'],
-                  primeryContainerColor:
-                      medicines[index]['primaryContainerColor'],
-                  secondryContainerColor:
-                      medicines[index]['secondaryContainerColor'],
-                );
+                return buildMedicationCard(medicines[index]);
               },
             ),
           ),
@@ -107,31 +102,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
       },
     );
   }
-  Widget buildMedicationList() {
-    return Expanded(
-      child: ListView.builder(
-        itemCount: medicines.length,
-        itemBuilder: (context, index) {
-          return MedicianCard(
-            name: medicines[index]['name'],
-            dose: medicines[index]['dose'],
-            status: medicines[index]['status'],
-            time: medicines[index]['time'],
-            primeryContainerColor:
-                medicines[index]['primaryContainerColor'],
-            secondryContainerColor:
-                medicines[index]['secondaryContainerColor'],
-          );
-        },
-      ),
+
+  Widget buildMedicationList(
+    List<HistoryDataModel> medicines,
+  ) {
+    if (medicines.isEmpty) {
+      return const Center(
+        child: Text(
+          'لا توجد أدوية في هذا اليوم',
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: medicines.length,
+      itemBuilder: (context, index) {
+        return buildMedicationCard(medicines[index]);
+      },
     );
   }
 
-Widget buildLandscapeButton() {
-  return Expanded(
-    child: Center(
+  Widget buildLandscapeButton(
+    BuildContext context,
+    List<HistoryDataModel> medicines,
+  ) {
+    return Center(
       child: ElevatedButton(
-        onPressed: showMedicinesDialog,
+        onPressed: medicines.isEmpty
+            ? null
+            : () {
+                showMedicinesDialog(
+                  context,
+                  medicines,
+                );
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.blackBlue,
           foregroundColor: Colors.white,
@@ -150,15 +154,10 @@ Widget buildLandscapeButton() {
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  // ----------------------------------------------------------
-  // Legend
-  // ----------------------------------------------------------
-
-  Widget buildLegend() {
+  Widget buildLegend(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: rs(context, 16),
@@ -196,9 +195,11 @@ Widget buildLandscapeButton() {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(right: rs(context, 16)),
+                  padding: EdgeInsets.only(
+                    right: rs(context, 16),
+                  ),
                   child: Text(
-                    "تم أخذه",
+                    'تم أخذه',
                     style: AppFonts.inter30BoldDark.copyWith(
                       fontSize: rs(context, 18),
                     ),
@@ -226,9 +227,11 @@ Widget buildLandscapeButton() {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(right: rs(context, 16)),
+                  padding: EdgeInsets.only(
+                    right: rs(context, 16),
+                  ),
                   child: Text(
-                    "لم يتم أخذه",
+                    'لم يتم أخذه',
                     style: AppFonts.inter30BoldDark.copyWith(
                       fontSize: rs(context, 18),
                     ),
@@ -256,9 +259,11 @@ Widget buildLandscapeButton() {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(right: rs(context, 16)),
+                  padding: EdgeInsets.only(
+                    right: rs(context, 16),
+                  ),
                   child: Text(
-                    "قيد الانتظار",
+                    'قيد الانتظار',
                     style: AppFonts.inter30BoldDark.copyWith(
                       fontSize: rs(context, 18),
                     ),
@@ -272,138 +277,203 @@ Widget buildLandscapeButton() {
     );
   }
 
+  Widget buildMonthSelector(BuildContext context) {
+    final cubit = context.read<HistoryCubit>();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        IconButton(
+          onPressed: () {
+            cubit.nextMonth(currentUser);
+          },
+          icon: const Icon(
+            Icons.arrow_back_ios_outlined,
+          ),
+        ),
+
+        TextButton(
+          onPressed: () async {
+            final selectedDate = await showMonthYearPicker(
+              context: context,
+              initialDate: cubit.requiredMonth,
+              firstDate: DateTime(2010),
+              lastDate: DateTime(2030),
+            );
+
+            if (selectedDate != null && context.mounted) {
+              final firstDayOfMonth = DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                1,
+              );
+
+              cubit.selectDate(
+                firstDayOfMonth,
+                currentUser,
+              );
+            }
+          },
+          child: Text(
+            DateFormat(
+              'MMMM yyyy',
+              'ar',
+            ).format(cubit.requiredMonth),
+            style: AppFonts.inter30BoldDark.copyWith(
+              fontSize: rs(context, 18),
+            ),
+          ),
+        ),
+
+        IconButton(
+          onPressed: () {
+            cubit.previousMonth(currentUser);
+          },
+          icon: const Icon(
+            Icons.arrow_forward_ios_outlined,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildDatePicker(BuildContext context) {
+    final cubit = context.read<HistoryCubit>();
+
+    return DatePicker(
+      daysCount: DateUtils.getDaysInMonth(
+        cubit.requiredMonth.year,
+        cubit.requiredMonth.month,
+      ),
+      dateTextStyle: TextStyle(
+        fontSize: rs(context, 18),
+        fontWeight: FontWeight.bold,
+      ),
+      dayTextStyle: TextStyle(
+        fontSize: rs(context, 11),
+        color: Colors.grey,
+      ),
+      monthTextStyle: TextStyle(
+        fontSize: rs(context, 11),
+        color: Colors.grey,
+      ),
+      width: rs(context, 50),
+      height: rs(context, 70),
+      key: ValueKey(cubit.requiredMonth),
+      cubit.requiredMonth,
+      locale: 'ar_EG',
+      selectionColor: AppColors.blackBlue,
+      initialSelectedDate: cubit.selected,
+      onDateChange: (selectedDate) {
+        cubit.selectDate(
+          selectedDate,
+          currentUser,
+        );
+      },
+    );
+  }
+
+  Widget buildHistoryContent(
+    BuildContext context,
+    HistoryState state,
+  ) {
+    if (state is HistoryLoadingState) {
+      return const Expanded(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (state is HistoryFailState) {
+      return Expanded(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              state.msg,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (state is HistorySuccessState) {
+      final medicines = state.thisDateMediciens;
+
+      return Expanded(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isShortScreen = constraints.maxHeight < 200;
+
+            if (isShortScreen) {
+              return buildLandscapeButton(
+                context,
+                medicines,
+              );
+            }
+
+            return buildMedicationList(
+              medicines,
+            );
+          },
+        ),
+      );
+    }
+
+    return const Expanded(
+      child: SizedBox.shrink(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.orientationOf(context) == Orientation.landscape;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'سجل الأدوية',
-          style: AppFonts.inter30BoldDark.copyWith(
-            fontSize: rs(context, 30),
-          ),
-        ),
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            size: rs(context, 30),
-          ),
-          color: AppColors.textDark,
-        ),
-        centerTitle: true,
+    return BlocProvider(
+    create: (_) => HistoryCubit()
+      ..getRelativeMediciensWithDate(
+        DateTime.now(),
+        currentUser,
       ),
-      body: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+    
+    child: BlocBuilder<HistoryCubit, HistoryState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'سجل الأدوية',
+              style: AppFonts.inter30BoldDark.copyWith(
+                fontSize: rs(context, 30),
+              ),
+            ),
+            leading: IconButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                size: rs(context, 30),
+              ),
+              color: AppColors.textDark,
+            ),
+            centerTitle: true,
+          ),
+          body: Column(
             children: [
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    requiredMonth = DateTime(
-                      requiredMonth.year,
-                      requiredMonth.month + 1,
-                    );
-                    selected = requiredMonth;
-                  });
-                },
-                icon: const Icon(
-                  Icons.arrow_back_ios_outlined,
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final selectedDate = await showMonthYearPicker(
-                    context: context,
-                    initialDate: requiredMonth,
-                    firstDate: DateTime(2010),
-                    lastDate: DateTime(2030),
-                  );
+              buildMonthSelector(context),
+              buildDatePicker(context),
 
-                  setState(() {
-                    requiredMonth = DateTime(
-                      selectedDate?.year ?? DateTime.now().year,
-                      selectedDate?.month ?? DateTime.now().month,
-                      1,
-                    );
+              buildHistoryContent(
+                context,
+                state,
+              ),
 
-                    selected = requiredMonth;
-                  });
-                },
-                child: Text(
-                  DateFormat(
-                    'MMMM yyyy',
-                    'ar',
-                  ).format(requiredMonth),
-                  style: AppFonts.inter30BoldDark.copyWith(
-                    fontSize: rs(context, 18),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  setState(() {
-                    requiredMonth = DateTime(
-                      requiredMonth.year,
-                      requiredMonth.month - 1,
-                    );
-                    selected = requiredMonth;
-                  });
-                },
-                icon: const Icon(
-                  Icons.arrow_forward_ios_outlined,
-                ),
-              ),
+              buildLegend(context),
             ],
           ),
-
-          DatePicker(
-            daysCount: DateUtils.getDaysInMonth(
-              requiredMonth.year,
-              requiredMonth.month,
-            ),
-            dateTextStyle: TextStyle(
-              fontSize: rs(context, 18),
-              fontWeight: FontWeight.bold,
-            ),
-            dayTextStyle: TextStyle(
-              fontSize: rs(context, 11),
-              color: Colors.grey,
-            ),
-            monthTextStyle: TextStyle(
-              fontSize: rs(context, 11),
-              color: Colors.grey,
-            ),
-            width: rs(context, 50),
-            height: rs(context, 70),
-            key: ValueKey(requiredMonth),
-            requiredMonth,
-            locale: 'ar_EG',
-            selectionColor: AppColors.blackBlue,
-            initialSelectedDate: requiredMonth,
-            onDateChange: (selectedDate) {
-              setState(() {
-                selected = selectedDate;
-              });
-            },
-          ),
-
-          // Portrait → ListView
-          // Landscape → Button
-          if (isLandscape)
-            buildLandscapeButton()
-          else
-            buildMedicationList(),
-
-          buildLegend(),
-        ],
-      ),
+        );
+      },
+    )
     );
   }
 }
-

@@ -1,4 +1,6 @@
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
 import 'package:dawaey/Fetures/history/presentation/view/history_screen.dart';
+import 'package:dawaey/Fetures/medications/data/model/medication_model.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/add_medication_screen.dart';
 import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
 import 'package:month_year_picker/month_year_picker.dart';
@@ -23,6 +25,15 @@ class MedicationReminderApp extends StatelessWidget {
       },
       routes: {
         '/add_medications' :(context) => AddMedicationScreen(),
+        '/history' :(context) => HistoryScreen(currentUser:  UserModel(
+  uid: 'OyMWoY97UBTR0tUUMNbTrpSseM2',
+  email: 'heiarayashiki@gmail.com',
+  name: 'Mohamed MX',
+  phone: '',
+  profileImage: null,
+  role: UserRole.patient,
+)
+        ),
       }, 
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'EG'),
@@ -39,8 +50,17 @@ class MedicationReminderApp extends StatelessWidget {
         MonthYearPickerLocalizations.delegate,
       ],
 
-// AI
-      home: const AuthWrapper(),
+// AI mesh omar 
+//omarsa
+     /** home:  HistoryScreen(currentUser: UserModel(
+  uid: '0yMWoY97UBTRT0tUUMNbTrpSseM2',
+  email: 'heiarayashiki@gmail.com',
+  name: 'Mohamed MX',
+  phone: '',
+  profileImage: null,
+  role: UserRole.patient,
+)), */
+home: home_caretaker_screen(),
 // mohamed medhat 
 //      home:home_caretaker_screen(),
 //dev two
