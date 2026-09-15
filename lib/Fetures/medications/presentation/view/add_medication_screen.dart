@@ -7,6 +7,8 @@ import '../../data/model/doise_model.dart';
 import '../../../patients/presentation/cubit/patients_cubit.dart';
 import '../../../patients/presentation/cubit/patients_state.dart';
 import '../../../patients/data/model/patient_model.dart';
+import 'dart:async';
+import '../../services/rxnorm_service.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   final MedicationModel? editMedication;
@@ -24,6 +26,10 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   DateTime? endSelectedDate ;
   List<TimeOfDay?> selectedTimes = List.filled(4, null);
   String? selectedPatientId;
+  final RxNormService _rxNormService = RxNormService();
+  List<String> _suggestions = [];
+  bool _isLoadingSuggestions = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -74,6 +80,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     nameController.dispose();
     doseController.dispose();
     remainingDosesController.dispose();
@@ -371,6 +378,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: nameController,
+            onChanged: _onDrugNameChanged,
             decoration: InputDecoration(
               hintText: 'مثال: أموكسيسيلين',
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -379,38 +387,94 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Align(
-            alignment: Alignment.centerRight,
-            child: const Text('أو اختر من الأدوية الشائعة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-          ),
-          const SizedBox(height: 12),
-          _buildCommonMed('ميتفورمين'),
-          const SizedBox(height: 12),
-          _buildCommonMed('أموكسيسيلين'),
-          const SizedBox(height: 12),
-          _buildCommonMed('أوميبرازول'),
+          if (_isLoadingSuggestions)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 12),
+                    Text('جاري البحث عن الأدوية...', style: TextStyle(color: Color(0xFF1B363F))),
+                  ],
+                ),
+              ),
+            )
+          else if (_suggestions.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: const Text('أدوية مقترحة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            ),
+            const SizedBox(height: 12),
+            ..._suggestions.map((suggestion) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: _buildSuggestion(suggestion),
+                )),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildCommonMed(String name) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-          Container(
-            decoration: BoxDecoration(color: Colors.teal.shade100, shape: BoxShape.circle),
-            padding: const EdgeInsets.all(4),
-            child: const Icon(Icons.add, color: Colors.teal, size: 20),
-          ),
-        ],
+  void _onDrugNameChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    if (query.trim().isEmpty) {
+      setState(() {
+        _suggestions = [];
+        _isLoadingSuggestions = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final results = await _rxNormService.searchMedicine(query);
+      if (mounted) {
+        setState(() {
+          _suggestions = results;
+          _isLoadingSuggestions = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildSuggestion(String name) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          nameController.text = name;
+          _suggestions = [];
+          FocusScope.of(context).unfocus();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                name,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(color: Colors.teal.shade100, shape: BoxShape.circle),
+              padding: const EdgeInsets.all(4),
+              child: const Icon(Icons.check, color: Colors.teal, size: 20),
+            ),
+          ],
+        ),
       ),
     );
   }
