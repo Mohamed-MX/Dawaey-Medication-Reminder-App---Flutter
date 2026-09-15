@@ -1,4 +1,5 @@
 import 'package:dawaey/Fetures/history/presentation/view_model/history_cubit.dart';
+import 'package:dawaey/Fetures/patient/home/presentation/view_model/patient_home_cubit.dart';
 import 'package:dawaey/my_app/medication_reminder_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,25 +46,23 @@ void main() async {
   await Hive.openBox('authBox'); // Required for AuthLocalStorage
 
   runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => PatientsCubit()..loadPatients(),
-          // create: (context) => PatientsCubit(patientsBox)..loadPatients(),
-        ),
-        BlocProvider(
-          create: (context) => MedicationsCubit()..loadMedications(),
-          // create: (context) => MedicationsCubit(medicationsBox, dosesBox)..loadMedications(),
-        ),
-        BlocProvider(
-          create: (context) => AuthCubit()..checkCurrentUser(),
-        ),
-         BlocProvider(
-         create: (_) => HistoryCubit(),
-         ),
-      ],
-      child: const MedicationReminderApp(), // Extracted to keep the main method pristine
+MultiBlocProvider(
+  providers: [
+    BlocProvider(
+      create: (context) => PatientsCubit()..loadPatients(),
     ),
+    BlocProvider(
+      create: (context) => MedicationsCubit()..loadMedications(),
+    ),
+    BlocProvider(
+      create: (context) => AuthCubit()..checkCurrentUser(),
+    ),
+    BlocProvider(
+      create: (_) => HistoryCubit(),
+    ),
+  ],
+  child: const MedicationReminderApp(),
+)
   );
 }
 

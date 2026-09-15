@@ -7,6 +7,7 @@ import 'add_medication_screen.dart';
 import '../../../patients/presentation/cubit/patients_cubit.dart';
 import '../../../patients/presentation/cubit/patients_state.dart';
 import '../../../patients/data/model/patient_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
 
 class MedicationsScreen extends StatelessWidget {
   const MedicationsScreen({super.key});
