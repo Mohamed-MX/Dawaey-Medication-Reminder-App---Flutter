@@ -52,8 +52,9 @@ class PatientsCubit extends Cubit<PatientsState> {
 
         // Ensure "Me" exists in the data
         bool meExists = patients.any((p) => p.id == meId);
+        final userName = AuthLocalStorage.getUser()?.name ?? 'أنا';
         if (!meExists) {
-          final me = PatientModel(id: meId, name: 'أنا', relationship: 'نفسي');
+          final me = PatientModel(id: meId, name: userName, relationship: 'نفسي');
           // Save it to firestore
           await _firestore.collection('users').doc(uid).collection('patients').doc(meId).set({
             'id': me.id,
@@ -61,6 +62,15 @@ class PatientsCubit extends Cubit<PatientsState> {
             'relationship': me.relationship,
           });
           patients.add(me);
+        } else {
+          // Update the "Me" patient's name if it's stale (e.g. old placeholder 'اسمي')
+          final mePatient = patients.firstWhere((p) => p.id == meId);
+          if (mePatient.name != userName && userName.isNotEmpty) {
+            mePatient.name = userName;
+            await _firestore.collection('users').doc(uid).collection('patients').doc(meId).update({
+              'name': userName,
+            });
+          }
         }
 
         // Sort so "Me" is first

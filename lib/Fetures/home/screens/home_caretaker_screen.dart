@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../medications/presentation/view/add_medication_screen.dart';
 import '../../medications/presentation/view/medications_screen.dart';
@@ -263,9 +263,11 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
                                   },
                                   items: [
                                     ...patientState.patients.map<DropdownMenuItem<String?>>((PatientModel p) {
+                                      final isMe = p.id == 'user_1';
+                                      final displayName = isMe ? '${p.name} (أنا)' : p.name;
                                       return DropdownMenuItem<String?>(
                                         value: p.id,
-                                        child: Text(p.name),
+                                        child: Text(displayName),
                                       );
                                     }).toList(),
                                     const DropdownMenuItem<String?>(
@@ -526,7 +528,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
 
   void _showAddPatientDialog(BuildContext context) {
     final nameController = TextEditingController();
-    String selectedRelationship = 'نفسي';
+    String selectedRelationship = 'أنا';
     
     showDialog(
       context: context,
@@ -553,7 +555,7 @@ class _home_caretaker_screenState extends State<home_caretaker_screen> {
                       border: OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'نفسي', child: Text('أنا')),
+                      DropdownMenuItem(value: 'أنا', child: Text('أنا')),
                       DropdownMenuItem(value: 'أب', child: Text('أب')),
                       DropdownMenuItem(value: 'أم', child: Text('أم')),
                       DropdownMenuItem(value: 'أخ/أخت', child: Text('أخ/أخت')),
