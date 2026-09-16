@@ -1,19 +1,26 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
+import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
+import 'package:dawaey/Fetures/medications/data/model/medication_model.dart';
+import 'package:dawaey/Fetures/medications/presentation/cubit/medications_cubit.dart';
 import 'package:dawaey/Fetures/medications/widgets/calender.dart';
+import 'package:dawaey/services/rxnorm_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../cubit/medications_cubit.dart';
-import '../../data/model/medication_model.dart';
-import '../../data/model/doise_model.dart';
-import '../../../patients/presentation/cubit/patients_cubit.dart';
-import '../../../patients/presentation/cubit/patients_state.dart';
-import '../../../patients/data/model/patient_model.dart';
-import 'dart:async';
-import '../../services/rxnorm_service.dart';
 
 class AddMedicationScreen extends StatefulWidget {
   final MedicationModel? editMedication;
   final String? targetPatientId;
-  const AddMedicationScreen({super.key, this.editMedication, this.targetPatientId});
+  final String? targetPatientName;
+
+  const AddMedicationScreen({
+    super.key,
+    this.editMedication,
+    this.targetPatientId,
+    this.targetPatientName,
+  });
 
   @override
   State<AddMedicationScreen> createState() => _AddMedicationScreenState();
@@ -23,29 +30,29 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
-  DateTime? startSelectedDate ;
-  DateTime? endSelectedDate ;
+
+  DateTime? startSelectedDate;
+  DateTime? endSelectedDate;
   List<TimeOfDay?> selectedTimes = List.filled(4, null);
+
   String? selectedPatientId;
+  final TextEditingController patientNameController = TextEditingController();
+
   final RxNormService _rxNormService = RxNormService();
-  List<String> _suggestions = [];
+  final List<String> _suggestions = [];
   bool _isLoadingSuggestions = false;
+  String? _suggestionsError;
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    if (widget.targetPatientId != null && widget.targetPatientId!.isNotEmpty) {
-      selectedPatientId = widget.targetPatientId;
-    } else {
-      final patientState = context.read<PatientsCubit>().state;
-      if (patientState is PatientsLoaded) {
-         selectedPatientId = patientState.selectedPatientId ?? patientState.patients.first.id;
-      }
-    }
+
+    patientNameController.text = 'جاري تحميل اسم المريض...';
 
     if (widget.editMedication != null) {
       final med = widget.editMedication!;
+
       selectedPatientId = med.patientId;
       nameController.text = med.medicationName;
       doseController.text = med.dosage;
@@ -57,26 +64,118 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       pillsLeftController.text = med.remainingMedicationAmount.toString();
       notesController.text = med.notes;
 
-      for (int i = 0; i < med.intakeTimes.length && i < selectedTimes.length; i++) {
+      for (
+        int i = 0;
+        i < med.intakeTimes.length && i < selectedTimes.length;
+        i++
+      ) {
         selectedTimes[i] = med.intakeTimes[i];
       }
+    }
+
+    _loadTargetPatient();
+  }
+
+  Future<void> _loadTargetPatient() async {
+    final currentUser = context.read<AuthCubit>().currentUser;
+
+    String? patientId;
+
+    if (widget.targetPatientId != null &&
+        widget.targetPatientId!.trim().isNotEmpty) {
+      patientId = widget.targetPatientId!.trim();
+    } else if (widget.editMedication != null) {
+      patientId = widget.editMedication!.patientId;
+    } else if (currentUser != null && currentUser.role == UserRole.patient) {
+      patientId = currentUser.uid;
+    } else if (currentUser != null && currentUser.role == UserRole.caregiver) {
+      patientId = currentUser.linkedUserId;
+    }
+
+    if (patientId == null || patientId.isEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        selectedPatientId = null;
+        patientNameController.text = 'تعذر تحديد المريض';
+      });
+      return;
+    }
+
+    selectedPatientId = patientId;
+
+    final passedName = widget.targetPatientName?.trim();
+    if (passedName != null && passedName.isNotEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = passedName;
+      });
+      return;
+    }
+
+    if (currentUser != null && currentUser.uid == patientId) {
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = currentUser.name;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(patientId)
+          .get();
+
+      if (!mounted) return;
+
+      if (!doc.exists || doc.data() == null) {
+        setState(() {
+          patientNameController.text = 'المريض غير موجود';
+        });
+        return;
+      }
+
+      final patientName = (doc.data()!['name'] ?? '').toString().trim();
+
+      setState(() {
+        patientNameController.text = patientName.isEmpty
+            ? 'المريض'
+            : patientName;
+      });
+    } catch (e) {
+      debugPrint('Load patient name error: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        patientNameController.text = 'تعذر تحميل اسم المريض';
+      });
     }
   }
 
   String _frequencyToStringReverse(MedicationFrequency freq) {
     switch (freq) {
-      case MedicationFrequency.onceDaily: return 'مرة واحدة يوميًا';
-      case MedicationFrequency.twiceDaily: return 'مرتين يوميًا';
-      case MedicationFrequency.threeTimesDaily: return 'ثلاث مرات يوميًا';
-      case MedicationFrequency.fourTimesDaily: return 'أربع مرات يوميًا';
-      default: return 'مرة واحدة يوميًا';
+      case MedicationFrequency.onceDaily:
+        return 'مرة واحدة يوميًا';
+      case MedicationFrequency.twiceDaily:
+        return 'مرتين يوميًا';
+      case MedicationFrequency.threeTimesDaily:
+        return 'ثلاث مرات يوميًا';
+      case MedicationFrequency.fourTimesDaily:
+        return 'أربع مرات يوميًا';
+      default:
+        return 'مرة واحدة يوميًا';
     }
   }
 
   // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController doseController = TextEditingController();
-  final TextEditingController remainingDosesController = TextEditingController();
+  final TextEditingController remainingDosesController =
+      TextEditingController();
   final TextEditingController pillsLeftController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
 
@@ -86,6 +185,7 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    patientNameController.dispose();
     nameController.dispose();
     doseController.dispose();
     remainingDosesController.dispose();
@@ -94,12 +194,14 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     _pageController.dispose();
     super.dispose();
   }
-    double rs(BuildContext context, double value) {
+
+  double rs(BuildContext context, double value) {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final scale = (screenWidth / 382).clamp(0.9, 1.2);
 
     return value * scale;
   }
+
   void _nextPage() {
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
@@ -120,61 +222,61 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1B363F)),
-            onPressed: () => Navigator.of(context).pop(),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF1B363F)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'إضافة دواء جديد',
+          style: TextStyle(
+            color: Color(0xFF1B363F),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
           ),
-          title: const Text(
-            'إضافة دواء جديد',
-            style: TextStyle(
+        ),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 16),
+          _buildProgressBar(),
+          const SizedBox(height: 8),
+          Text(
+            '${_currentPage + 1}/$_totalPages',
+            style: const TextStyle(
               color: Color(0xFF1B363F),
               fontWeight: FontWeight.bold,
-              fontSize: 22,
+              fontSize: 16,
             ),
           ),
-          centerTitle: true,
-        ),
-        body: Column(
-          children: [
-            const SizedBox(height: 16),
-            _buildProgressBar(),
-            const SizedBox(height: 8),
-            Text(
-              '${_currentPage + 1}/$_totalPages',
-              style: const TextStyle(
-                color: Color(0xFF1B363F),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              children: [
+                _buildStep1(),
+                _buildStep2(),
+                _buildStep3(),
+                _buildStep4(),
+                _buildStep5(),
+                _buildStep6(),
+              ],
             ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                children: [
-                  _buildStep1(),
-                  _buildStep2(),
-                  _buildStep3(),
-                  _buildStep4(),
-                  _buildStep5(),
-                  _buildStep6(),
-                ],
-              ),
-            ),
-            _buildFooter(),
-          ],
-        ),
+          ),
+          _buildFooter(),
+        ],
+      ),
     );
   }
 
@@ -183,43 +285,48 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 40.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List<Widget>.generate(_totalPages, (index) {
-          bool isActive = index <= _currentPage;
-          return Expanded(
-            child: Row(
-              children: [
+        children:
+            List<Widget>.generate(_totalPages, (index) {
+                bool isActive = index <= _currentPage;
+                return Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isActive
+                              ? Colors.teal
+                              : Colors.teal.withOpacity(0.3),
+                        ),
+                      ),
+                      if (index < _totalPages - 1)
+                        Expanded(
+                          child: Container(
+                            height: 2,
+                            color: isActive
+                                ? Colors.teal
+                                : Colors.teal.withOpacity(0.3),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList()
+              ..removeLast() // because the last one shouldn't have a trailing line
+              ..add(
                 Container(
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isActive ? Colors.teal : Colors.teal.withOpacity(0.3),
+                    color: _currentPage == _totalPages - 1
+                        ? Colors.teal
+                        : Colors.teal.withOpacity(0.3),
                   ),
                 ),
-                if (index < _totalPages - 1)
-                  Expanded(
-                    child: Container(
-                      height: 2,
-                      color: isActive ? Colors.teal : Colors.teal.withOpacity(0.3),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        }).toList()
-          ..removeLast() // because the last one shouldn't have a trailing line
-          ..add(
-            Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _currentPage == _totalPages - 1
-                    ? Colors.teal
-                    : Colors.teal.withOpacity(0.3),
               ),
-            ),
-          ),
       ),
     );
   }
@@ -245,7 +352,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Icon(Icons.arrow_back, size: 20, color: Color(0xFF1B363F)), // Forward icon because RTL
+                    Icon(
+                      Icons.arrow_back,
+                      size: 20,
+                      color: Color(0xFF1B363F),
+                    ), // Forward icon because RTL
                     SizedBox(width: 8),
                     Text(
                       'السابق',
@@ -267,25 +378,47 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 if (_currentPage == _totalPages - 1) {
                   final name = nameController.text.trim();
                   if (name.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال اسم الدواء')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('الرجاء إدخال اسم الدواء')),
+                    );
                     return;
                   }
-                  
-                  final medId = DateTime.now().millisecondsSinceEpoch.toString();
+
+                  if (selectedPatientId == null || selectedPatientId!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تعذر تحديد المريض صاحب الدواء'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final medId = DateTime.now().millisecondsSinceEpoch
+                      .toString();
                   final newMed = MedicationModel(
                     id: widget.editMedication?.id ?? medId,
-                    patientId: selectedPatientId ?? 'user_1',
+                    patientId: selectedPatientId!,
                     medicationName: name,
                     administrationRoute: selectedUsageMethod,
                     dosage: doseController.text.trim(),
                     frequency: _mapFrequency(selectedFrequency),
-                    intakeTimes: selectedTimes.take(_getSlotCount()).where((t) => t != null).cast<TimeOfDay>().toList(),
+                    intakeTimes: selectedTimes
+                        .take(_getSlotCount())
+                        .where((t) => t != null)
+                        .cast<TimeOfDay>()
+                        .toList(),
                     startDate: startSelectedDate ?? DateTime.now(),
-                    endDate: endSelectedDate ?? DateTime.now().add(const Duration(days: 30)),
-                    remainingDoses: int.tryParse(remainingDosesController.text) ?? 0,
-                    remainingMedicationAmount: int.tryParse(pillsLeftController.text) ?? 0,
+                    endDate:
+                        endSelectedDate ??
+                        DateTime.now().add(const Duration(days: 30)),
+                    remainingDoses:
+                        int.tryParse(remainingDosesController.text) ?? 0,
+                    remainingMedicationAmount:
+                        int.tryParse(pillsLeftController.text) ?? 0,
                     notes: notesController.text,
-                    status: widget.editMedication?.status ?? MedicationStatus.active,
+                    status:
+                        widget.editMedication?.status ??
+                        MedicationStatus.active,
                   );
 
                   if (widget.editMedication != null) {
@@ -299,7 +432,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF106A8E), // dark blue/teal matching design
+                backgroundColor: const Color(
+                  0xFF106A8E,
+                ), // dark blue/teal matching design
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -318,8 +453,12 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
                   ),
                   if (_currentPage < _totalPages - 1) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, size: 20, color: Colors.white), // Back icon because RTL
-                  ]
+                    const Icon(
+                      Icons.arrow_forward,
+                      size: 20,
+                      color: Colors.white,
+                    ), // Back icon because RTL
+                  ],
                 ],
               ),
             ),
@@ -332,11 +471,16 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   // --- Step 1 ---
   MedicationFrequency _mapFrequency(String freq) {
     switch (freq) {
-      case 'مرة واحدة يوميًا': return MedicationFrequency.onceDaily;
-      case 'مرتين يوميًا': return MedicationFrequency.twiceDaily;
-      case 'ثلاث مرات يوميًا': return MedicationFrequency.threeTimesDaily;
-      case 'أربع مرات يوميًا': return MedicationFrequency.fourTimesDaily;
-      default: return MedicationFrequency.onceDaily;
+      case 'مرة واحدة يوميًا':
+        return MedicationFrequency.onceDaily;
+      case 'مرتين يوميًا':
+        return MedicationFrequency.twiceDaily;
+      case 'ثلاث مرات يوميًا':
+        return MedicationFrequency.threeTimesDaily;
+      case 'أربع مرات يوميًا':
+        return MedicationFrequency.fourTimesDaily;
+      default:
+        return MedicationFrequency.onceDaily;
     }
   }
 
@@ -345,85 +489,149 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('لمن هذا الدواء؟', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-          const SizedBox(height: 8),
-          BlocBuilder<PatientsCubit, PatientsState>(
-            builder: (context, state) {
-              if (state is PatientsLoaded) {
-                // Ensure selectedPatientId matches an item in the list,
-                // otherwise the DropdownButton will throw an assertion error.
-                final patientIds = state.patients.map((p) => p.id).toSet();
-                final validValue = (selectedPatientId != null && patientIds.contains(selectedPatientId))
-                    ? selectedPatientId
-                    : null;
-
-                return DropdownButtonFormField<String>(
-                  value: validValue,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                  ),
-                  hint: const Text('اختر المريض'),
-                  items: state.patients.map((p) => DropdownMenuItem(value: p.id, child: Text('${p.name} (${p.relationship})'))).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      selectedPatientId = val;
-                    });
-                  },
-                );
-              }
-              return const CircularProgressIndicator();
-            },
+          const Text(
+            'لمن هذا الدواء؟',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
           ),
+          const SizedBox(height: 8),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              patientNameController.text,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 24),
-          const Text('اسم الدواء', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'اسم الدواء',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade50),
-            child: Icon(Icons.medication, size: 50, color: Colors.blue.shade300),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: Icon(
+              Icons.medication,
+              size: 50,
+              color: Colors.blue.shade300,
+            ),
           ),
           const SizedBox(height: 32),
-          Align(
+          const Align(
             alignment: Alignment.centerRight,
-            child: const Text('اسم الدواء', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: Text(
+              'اسم الدواء',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: nameController,
             onChanged: _onDrugNameChanged,
             decoration: InputDecoration(
-              hintText: 'مثال: أموكسيسيلين',
+              hintText: 'مثال: amoxicillin',
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+
           if (_isLoadingSuggestions)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                    SizedBox(width: 12),
-                    Text('جاري البحث عن الأدوية...', style: TextStyle(color: Color(0xFF1B363F))),
-                  ],
-                ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 10),
+                  Text('جاري البحث عن الأدوية...'),
+                ],
+              ),
+            )
+          else if (_suggestionsError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _suggestionsError!,
+                style: const TextStyle(color: Colors.red, fontSize: 13),
               ),
             )
           else if (_suggestions.isNotEmpty) ...[
-            Align(
+            const Align(
               alignment: Alignment.centerRight,
-              child: const Text('أدوية مقترحة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+              child: Text(
+                'اقتراحات من RxNorm',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
-            ..._suggestions.map((suggestion) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _buildSuggestion(suggestion),
-                )),
+            ..._suggestions.map(
+              (medicineName) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildApiSuggestion(medicineName),
+              ),
+            ),
+          ] else ...[
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'أو اختر من الأدوية الشائعة',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildCommonMed('Metformin'),
+            const SizedBox(height: 12),
+            _buildCommonMed('Amoxicillin'),
+            const SizedBox(height: 12),
+            _buildCommonMed('Omeprazole'),
           ],
         ],
       ),
@@ -431,40 +639,109 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   }
 
   void _onDrugNameChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
-    if (query.trim().isEmpty) {
+    _debounce?.cancel();
+
+    final value = query.trim();
+
+    if (value.length < 2) {
       setState(() {
-        _suggestions = [];
+        _suggestions.clear();
         _isLoadingSuggestions = false;
+        _suggestionsError = null;
       });
       return;
     }
 
-    setState(() {
-      _isLoadingSuggestions = true;
-    });
+    _debounce = Timer(const Duration(milliseconds: 450), () async {
+      if (!mounted) return;
 
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
-      final results = await _rxNormService.searchMedicine(query);
-      if (mounted) {
+      setState(() {
+        _isLoadingSuggestions = true;
+        _suggestionsError = null;
+      });
+
+      try {
+        final results = await _rxNormService.searchMedicine(value);
+
+        if (!mounted) return;
+
         setState(() {
-          _suggestions = results;
+          _suggestions
+            ..clear()
+            ..addAll(results);
           _isLoadingSuggestions = false;
+        });
+      } catch (e) {
+        debugPrint('RxNorm error: $e');
+
+        if (!mounted) return;
+
+        setState(() {
+          _suggestions.clear();
+          _isLoadingSuggestions = false;
+          _suggestionsError = 'تعذر تحميل اقتراحات الأدوية. تأكد من الإنترنت.';
         });
       }
     });
   }
 
-  Widget _buildSuggestion(String name) {
+  Widget _buildApiSuggestion(String medicineName) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          nameController.text = medicineName;
+          nameController.selection = TextSelection.collapsed(
+            offset: medicineName.length,
+          );
+          _suggestions.clear();
+          _suggestionsError = null;
+        });
+
+        FocusScope.of(context).unfocus();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.teal.shade200),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.medication_outlined, color: Colors.teal),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                medicineName,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommonMed(String name) {
     return InkWell(
       onTap: () {
         setState(() {
           nameController.text = name;
-          _suggestions = [];
-          FocusScope.of(context).unfocus();
+          nameController.selection = TextSelection.collapsed(
+            offset: name.length,
+          );
+          _suggestions.clear();
+          _suggestionsError = null;
         });
+
+        FocusScope.of(context).unfocus();
       },
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -477,14 +754,20 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F)),
-                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1B363F),
+                ),
               ),
             ),
             Container(
-              decoration: BoxDecoration(color: Colors.teal.shade100, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade100,
+                shape: BoxShape.circle,
+              ),
               padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.check, color: Colors.teal, size: 20),
+              child: const Icon(Icons.add, color: Colors.teal, size: 20),
             ),
           ],
         ),
@@ -498,21 +781,45 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('الجرعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'الجرعة',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.yellow.shade50),
-            child: Icon(Icons.medication_liquid, size: 50, color: Colors.yellow.shade700), // Approximate icon
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.yellow.shade50,
+            ),
+            child: Icon(
+              Icons.medication_liquid,
+              size: 50,
+              color: Colors.yellow.shade700,
+            ), // Approximate icon
           ),
           const SizedBox(height: 32),
           Align(
             alignment: Alignment.centerRight,
-            child: const Text('الجرعة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: const Text(
+              'الجرعة',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           Container(
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -531,7 +838,14 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
           const SizedBox(height: 24),
           Align(
             alignment: Alignment.centerRight,
-            child: const Text('طريقة الاستخدام', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: const Text(
+              'طريقة الاستخدام',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -556,7 +870,11 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
     );
   }
 
-  Widget _buildUsageMethod(String title, IconData icon, {bool fullWidth = false}) {
+  Widget _buildUsageMethod(
+    String title,
+    IconData icon, {
+    bool fullWidth = false,
+  }) {
     bool selected = selectedUsageMethod == title;
     return InkWell(
       onTap: () {
@@ -568,7 +886,9 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         decoration: BoxDecoration(
           color: selected ? Colors.teal.shade50 : Colors.white,
-          border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
+          border: Border.all(
+            color: selected ? Colors.teal : Colors.grey.shade300,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -578,10 +898,18 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
               children: [
                 Icon(icon, color: Colors.grey),
                 const SizedBox(width: 8),
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? Colors.teal : const Color(0xFF1B363F),
+                  ),
+                ),
               ],
             ),
-            if (selected) const Icon(Icons.radio_button_checked, color: Colors.teal),
+            if (selected)
+              const Icon(Icons.radio_button_checked, color: Colors.teal),
           ],
         ),
       ),
@@ -594,17 +922,38 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('معدل التكرار', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'معدل التكرار',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade50),
-            child: Icon(Icons.calendar_month, size: 50, color: const Color(0xFF106A8E)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: Icon(
+              Icons.calendar_month,
+              size: 50,
+              color: const Color(0xFF106A8E),
+            ),
           ),
           const SizedBox(height: 32),
           Align(
             alignment: Alignment.centerRight,
-            child: const Text('كم مرة يتم تناوله؟', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: const Text(
+              'كم مرة يتم تناوله؟',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           _buildFrequencyOption('مرة واحدة يوميًا'),
@@ -631,14 +980,26 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: selected ? Colors.teal.shade50 : Colors.white,
-          border: Border.all(color: selected ? Colors.teal : Colors.grey.shade300),
+          border: Border.all(
+            color: selected ? Colors.teal : Colors.grey.shade300,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: selected ? Colors.teal : const Color(0xFF1B363F))),
-            Icon(selected ? Icons.check_circle : Icons.circle_outlined, color: selected ? Colors.teal : Colors.grey),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: selected ? Colors.teal : const Color(0xFF1B363F),
+              ),
+            ),
+            Icon(
+              selected ? Icons.check_circle : Icons.circle_outlined,
+              color: selected ? Colors.teal : Colors.grey,
+            ),
           ],
         ),
       ),
@@ -648,32 +1009,58 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
   // --- Step 4 ---
   int _getSlotCount() {
     switch (selectedFrequency) {
-      case 'مرة واحدة يوميًا': return 1;
-      case 'مرتين يوميًا': return 2;
-      case 'ثلاث مرات يوميًا': return 3;
-      case 'أربع مرات يوميًا': return 4;
-      default: return 1;
+      case 'مرة واحدة يوميًا':
+        return 1;
+      case 'مرتين يوميًا':
+        return 2;
+      case 'ثلاث مرات يوميًا':
+        return 3;
+      case 'أربع مرات يوميًا':
+        return 4;
+      default:
+        return 1;
     }
   }
 
   Widget _buildStep4() {
     final int slotCount = _getSlotCount();
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('مواعيد التناول', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'مواعيد التناول',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade50),
-            child: Icon(Icons.access_time, size: 50, color: const Color(0xFF106A8E)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: Icon(
+              Icons.access_time,
+              size: 50,
+              color: const Color(0xFF106A8E),
+            ),
           ),
           const SizedBox(height: 32),
           Align(
             alignment: Alignment.centerRight,
-            child: const Text('اختر مواعيد التناول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+            child: const Text(
+              'اختر مواعيد التناول',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           ...List.generate(slotCount, (index) {
@@ -698,37 +1085,57 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-         time == null 
-          ? const Text("بالرجاء تحديد موعد", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))) 
-          : Text("${time.hour % 12 == 0 ? 12 : time.hour % 12}:${time.minute.toString().padLeft(2, '0')} ${time.hour >= 12 ? 'مساء' : 'صباحا'}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
-         IconButton(
-          onPressed: () async {
-            TimeOfDay? selectedTime = await showTimePicker(
-              context: context,
-              initialTime: time ?? TimeOfDay.now(),
-            );
-            if (selectedTime != null) {
-              setState(() {
-                selectedTimes[index] = selectedTime;
-                
-                // Auto-fill subsequent times if the first slot is selected
-                if (index == 0) {
-                  int interval = 24;
-                  if (selectedFrequency == 'مرتين يوميًا') interval = 12;
-                  else if (selectedFrequency == 'ثلاث مرات يوميًا') interval = 8;
-                  else if (selectedFrequency == 'أربع مرات يوميًا') interval = 6;
+          time == null
+              ? const Text(
+                  "بالرجاء تحديد موعد",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1B363F),
+                  ),
+                )
+              : Text(
+                  "${time.hour % 12 == 0 ? 12 : time.hour % 12}:${time.minute.toString().padLeft(2, '0')} ${time.hour >= 12 ? 'مساء' : 'صباحا'}",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1B363F),
+                  ),
+                ),
+          IconButton(
+            onPressed: () async {
+              TimeOfDay? selectedTime = await showTimePicker(
+                context: context,
+                initialTime: time ?? TimeOfDay.now(),
+              );
+              if (selectedTime != null) {
+                setState(() {
+                  selectedTimes[index] = selectedTime;
 
-                  for (int i = 1; i < _getSlotCount(); i++) {
-                    int newHour = (selectedTime.hour + (interval * i)) % 24;
-                    selectedTimes[i] = TimeOfDay(hour: newHour, minute: selectedTime.minute);
+                  // Auto-fill subsequent times if the first slot is selected
+                  if (index == 0) {
+                    int interval = 24;
+                    if (selectedFrequency == 'مرتين يوميًا')
+                      interval = 12;
+                    else if (selectedFrequency == 'ثلاث مرات يوميًا')
+                      interval = 8;
+                    else if (selectedFrequency == 'أربع مرات يوميًا')
+                      interval = 6;
+
+                    for (int i = 1; i < _getSlotCount(); i++) {
+                      int newHour = (selectedTime.hour + (interval * i)) % 24;
+                      selectedTimes[i] = TimeOfDay(
+                        hour: newHour,
+                        minute: selectedTime.minute,
+                      );
+                    }
                   }
-                }
-              });
-            }
-          }, 
-          icon: const Icon(Icons.access_time), 
-          color: Colors.red
-         ),
+                });
+              }
+            },
+            icon: const Icon(Icons.access_time),
+            color: Colors.red,
+          ),
         ],
       ),
     );
@@ -740,87 +1147,165 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
         children: [
-          const Text('مدة الاستخدام', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'مدة الاستخدام',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.blue.shade50),
-            child: Icon(Icons.calendar_today, size: 50, color: const Color(0xFF106A8E)),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.blue.shade50,
+            ),
+            child: Icon(
+              Icons.calendar_today,
+              size: 50,
+              color: const Color(0xFF106A8E),
+            ),
           ),
           const SizedBox(height: 32),
           _buildDateField('تاريخ البداية', 'start', icon: Icons.calendar_today),
           const SizedBox(height: 16),
-          _buildDateField('تاريخ الانتهاء (اختياري)' , 'end' , icon: Icons.calendar_today),
+          _buildDateField(
+            'تاريخ الانتهاء (اختياري)',
+            'end',
+            icon: Icons.calendar_today,
+          ),
           const SizedBox(height: 16),
-          _buildInputField('عدد الجرعات المتبقية (اختياري)', 'مثال: 30', controller: remainingDosesController),
+          _buildInputField(
+            'عدد الجرعات المتبقية (اختياري)',
+            'مثال: 30',
+            controller: remainingDosesController,
+          ),
         ],
       ),
     );
   }
 
-    Widget _buildDateField(String label,  String type, {IconData? icon}) {
+  Widget _buildDateField(String label, String type, {IconData? icon}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1B363F),
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           readOnly: true,
           decoration: InputDecoration(
-            hintText: type == "start" ? (startSelectedDate == null ? 'برجاء اختيار التاريخ من التقويم' : '${startSelectedDate!.year} / ${startSelectedDate!.month} / ${startSelectedDate!.day}'): (endSelectedDate == null ? 'برجاء اختيار التاريخ من التقويم' : '${endSelectedDate!.year} / ${endSelectedDate!.month} / ${endSelectedDate!.day}'),
-            prefixIcon: icon != null ? IconButton( onPressed: () async{
-                 final selectedDatev =  await showDialog<DateTime>(
-                  context: context,
-                   builder: (context){
-                    DateTime? selected = type == 'start' ? startSelectedDate : endSelectedDate;
-                        return AlertDialog(
-                          content: SingleChildScrollView(
-                            child: SizedBox(
-                              width: rs(context, 350),
-                              child: CalenderFeature( 
-                                beforeDate: type == 'start' ? null : startSelectedDate, 
-                                initialDate: type == 'start' ? startSelectedDate : endSelectedDate,
-                                onSelected: (value) {
-                                  selected = value;
-                                }
+            hintText: type == "start"
+                ? (startSelectedDate == null
+                      ? 'برجاء اختيار التاريخ من التقويم'
+                      : '${startSelectedDate!.year} / ${startSelectedDate!.month} / ${startSelectedDate!.day}')
+                : (endSelectedDate == null
+                      ? 'برجاء اختيار التاريخ من التقويم'
+                      : '${endSelectedDate!.year} / ${endSelectedDate!.month} / ${endSelectedDate!.day}'),
+            prefixIcon: icon != null
+                ? IconButton(
+                    onPressed: () async {
+                      final selectedDatev = await showDialog<DateTime>(
+                        context: context,
+                        builder: (context) {
+                          DateTime? selected = type == 'start'
+                              ? startSelectedDate
+                              : endSelectedDate;
+                          return AlertDialog(
+                            content: SingleChildScrollView(
+                              child: SizedBox(
+                                width: rs(context, 350),
+                                child: CalenderFeature(
+                                  beforeDate: type == 'start'
+                                      ? null
+                                      : startSelectedDate,
+                                  initialDate: type == 'start'
+                                      ? startSelectedDate
+                                      : endSelectedDate,
+                                  onSelected: (value) {
+                                    selected = value;
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          actions: [
-                            ElevatedButton(onPressed: (){
-                              Navigator.pop(context , selected );
-                            }, child: const Text("تأكيد"))
-                          ],
-                        );
-                   });
-                   
-                   if (selectedDatev != null) {
-                     setState(() {
-                      type == 'start' ? startSelectedDate = selectedDatev : endSelectedDate = selectedDatev ;
-                     });
-                   }
-            } , icon: Icon(icon), color: Colors.grey) : null,
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context, selected);
+                                },
+                                child: const Text("تأكيد"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
 
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      if (selectedDatev != null) {
+                        setState(() {
+                          type == 'start'
+                              ? startSelectedDate = selectedDatev
+                              : endSelectedDate = selectedDatev;
+                        });
+                      }
+                    },
+                    icon: Icon(icon),
+                    color: Colors.grey,
+                  )
+                : null,
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
           ),
         ),
       ],
     );
   }
-  Widget _buildInputField(String label, String hint, {IconData? icon, TextEditingController? controller}) {
+
+  Widget _buildInputField(
+    String label,
+    String hint, {
+    IconData? icon,
+    TextEditingController? controller,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1B363F),
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
           ),
         ),
       ],
@@ -834,27 +1319,62 @@ class _AddMedicationScreenState extends State<AddMedicationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Center(child: Text('معلومات إضافية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B363F)))),
+          const Center(
+            child: Text(
+              'معلومات إضافية',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B363F),
+              ),
+            ),
+          ),
           const SizedBox(height: 32),
-          const Text('كم قرصا متبقي لديك ؟', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'كم قرصا متبقي لديك ؟',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: pillsLeftController,
             decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('ملاحظات إضافية (اختياري)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B363F))),
+          const Text(
+            'ملاحظات إضافية (اختياري)',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1B363F),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: notesController,
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'أي ملاحظات مهمة حول الدواء...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
             ),
           ),
         ],
