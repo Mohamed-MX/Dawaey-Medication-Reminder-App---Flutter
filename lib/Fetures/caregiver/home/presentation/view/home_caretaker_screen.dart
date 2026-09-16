@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dawaey/Fetures/Auth/data/models/user_model.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_cubit.dart';
 import 'package:dawaey/Fetures/Auth/presentation/view_model/auth_state.dart';
+import 'package:dawaey/Fetures/history/presentation/view/history_screen.dart';
 import 'package:dawaey/Fetures/medications/data/model/doise_model.dart';
 import 'package:dawaey/Fetures/medications/presentation/cubit/medications_cubit.dart';
 import 'package:dawaey/Fetures/medications/presentation/cubit/medications_state.dart';
@@ -199,13 +200,35 @@ class _home_caretaker_screenState
         );
   }
 
-  void _onItemTapped(
-    int index,
-  ) {
-    setState(() {
-      _selectedIndex = index;
-    });
+void _onItemTapped(int index) {
+  if (index == 2) {
+    final currentUser =
+        context.read<AuthCubit>().currentUser;
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تحديد المستخدم الحالي'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => HistoryScreen(
+          currentUser: currentUser,
+        ),
+      ),
+    );
+
+    return;
   }
+
+  setState(() {
+    _selectedIndex = index;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
