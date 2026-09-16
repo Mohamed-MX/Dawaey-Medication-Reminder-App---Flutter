@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../medications/presentation/view/add_medication_screen.dart';
 import '../../medications/presentation/view/medications_screen.dart';

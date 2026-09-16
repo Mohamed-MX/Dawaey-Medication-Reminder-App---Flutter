@@ -48,6 +48,7 @@ app.*.map.json
 .env
 .env.*
 *.env
+env
 !.env.example
 local.properties
 key.properties

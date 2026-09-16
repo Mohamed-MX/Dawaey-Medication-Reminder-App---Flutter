@@ -13,6 +13,7 @@ import 'package:dawaey/Fetures/medications/presentation/view/medications_screen.
 import 'package:dawaey/core/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dawaey/Fetures/reports/presentation/view/reports_screen.dart';
 
 class home_caretaker_screen extends StatefulWidget {
   const home_caretaker_screen({super.key});
@@ -232,6 +233,7 @@ void _onItemTapped(int index) {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     return BlocListener<
         AuthCubit,
         AuthState>(
@@ -450,6 +452,64 @@ void _onItemTapped(int index) {
                   ),
                 ],
               ),
+=======
+    // Wrapping the entire Scaffold in Directionality RTL to make the BottomAppBar
+    // arrange children from right to left naturally.
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            _selectedIndex == 3 ? 'داشبورد التقارير' : 'متابعة العائلة',
+            style: const TextStyle(
+              color: Color(0xFF1B363F),
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: _buildBody(),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            // TODO: FAB action
+          },
+          backgroundColor: Colors.teal,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8.0,
+          color: Colors.white,
+          elevation: 10,
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildNavBarItem(Icons.home_outlined, 'الرئيسية', 0),
+                    const SizedBox(width: 24),
+                    _buildNavBarItem(Icons.medication_outlined, 'الأدوية', 1),
+                  ],
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildNavBarItem(Icons.calendar_today_outlined, 'المواعيد', 2),
+                    const SizedBox(width: 24),
+                    _buildNavBarItem(Icons.dashboard_outlined, 'داشبورد', 3),
+                  ],
+                ),
+              ],
+>>>>>>> 7f11c62 (feat: add reports feature, update caretaker views, and ignore env files)
             ),
           ),
         ),
@@ -513,6 +573,9 @@ void _onItemTapped(int index) {
   }
 
   Widget _buildBody() {
+    if (_selectedIndex == 3) {
+      return const ReportsScreen();
+    }
     return BlocBuilder<
         MedicationsCubit,
         MedicationsState>(
