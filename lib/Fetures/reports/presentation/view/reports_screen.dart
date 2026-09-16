@@ -474,6 +474,7 @@ class ReportsBody extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
           // Time
           Row(
             children: [
@@ -485,30 +486,39 @@ class ReportsBody extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(width: 8),
           // Medication Name & Icon
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    med.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1B363F),
-                    ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        med.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B363F),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        med.dosage,
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  Text(
-                    med.dosage,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.medication, color: Color(0xFF169B88), size: 22),
-              const Icon(Icons.chevron_left, color: Colors.grey, size: 18),
-            ],
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.medication, color: Color(0xFF169B88), size: 22),
+              ],
+            ),
           ),
         ],
       ),
