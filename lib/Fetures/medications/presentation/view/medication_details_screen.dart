@@ -20,47 +20,31 @@ class MedicationDetailsScreen extends StatelessWidget {
   }
 
   List<Map<String, String>> get medicationData => [
-        {
-          'label': 'الجرعة',
-          'value': medication.dosage,
-        },
-        {
-          'label': 'معدل التكرار',
-          'value': medication.frequency.arabicName,
-        },
-        {
-          'label': 'موعد الدواء',
-          'value': medication.intakeTimes.map((time) {
+    {'label': 'الجرعة', 'value': medication.dosage},
+    {'label': 'معدل التكرار', 'value': medication.frequency.arabicName},
+    {
+      'label': 'موعد الدواء',
+      'value': medication.intakeTimes
+          .map((time) {
             final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
             final minute = time.minute.toString().padLeft(2, '0');
             final period = time.hour >= 12 ? 'م' : 'ص';
 
             return '$hour:$minute $period';
-          }).join(' - '),
-        },
-        {
-          'label': 'تاريخ البداية',
-          'value': DateFormat(
-            'd MMMM yyyy',
-            'ar',
-          ).format(medication.startDate),
-        },
-        {
-          'label': 'تاريخ الانتهاء',
-          'value': DateFormat(
-            'd MMMM yyyy',
-            'ar',
-          ).format(medication.endDate),
-        },
-        {
-          'label': 'المتبقي لديك',
-          'value': '${medication.remainingDoses} جرعة',
-        },
-        {
-          'label': 'ملاحظات',
-          'value': medication.notes,
-        },
-      ];
+          })
+          .join('\n'),
+    },
+    {
+      'label': 'تاريخ البداية',
+      'value': DateFormat('d MMMM yyyy', 'ar').format(medication.startDate),
+    },
+    {
+      'label': 'تاريخ الانتهاء',
+      'value': DateFormat('d MMMM yyyy', 'ar').format(medication.endDate),
+    },
+    {'label': 'المتبقي لديك', 'value': '${medication.remainingDoses} جرعة'},
+    {'label': 'ملاحظات', 'value': medication.notes},
+  ];
 
   void _showMedicationInfoDialog(BuildContext context) {
     showDialog(
@@ -69,9 +53,7 @@ class MedicationDetailsScreen extends StatelessWidget {
         return AlertDialog(
           title: Text(
             'تفاصيل الدواء',
-            style: AppFonts.inter30BoldDark.copyWith(
-              fontSize: rs(context, 22),
-            ),
+            style: AppFonts.inter30BoldDark.copyWith(fontSize: rs(context, 22)),
             textAlign: TextAlign.center,
           ),
           content: SizedBox(
@@ -134,36 +116,26 @@ class MedicationDetailsScreen extends StatelessWidget {
     );
 
     if (result != null && context.mounted) {
-      showPauseSuccessDialog(
-        context,
-        rs,
-        result,
-      );
+      showPauseSuccessDialog(context, rs, result);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    medication =
-        ModalRoute.of(context)!.settings.arguments as MedicationModel;
+    medication = ModalRoute.of(context)!.settings.arguments as MedicationModel;
 
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
           title: Text(
             'تفاصيل الدواء',
-            style: AppFonts.inter30BoldDark.copyWith(
-              fontSize: rs(context, 30),
-            ),
+            style: AppFonts.inter30BoldDark.copyWith(fontSize: rs(context, 30)),
           ),
           leading: IconButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            icon: Icon(
-              Icons.arrow_back_ios_new,
-              size: rs(context, 30),
-            ),
+            icon: Icon(Icons.arrow_back_ios_new, size: rs(context, 30)),
             color: AppColors.textDark,
           ),
           centerTitle: true,
@@ -176,9 +148,7 @@ class MedicationDetailsScreen extends StatelessWidget {
               children: [
                 // Medication Header
                 Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: rs(context, 48),
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: rs(context, 48)),
                   child: Row(
                     children: [
                       Expanded(
@@ -219,9 +189,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(
-                        width: rs(context, 30),
-                      ),
+                      SizedBox(width: rs(context, 30)),
 
                       Container(
                         width: rs(context, 88),
@@ -291,30 +259,20 @@ class MedicationDetailsScreen extends StatelessWidget {
 
                 // Bottom Actions
                 Padding(
-                  padding: EdgeInsets.only(
-                    bottom: rs(context, 8),
-                  ),
+                  padding: EdgeInsets.only(bottom: rs(context, 8)),
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: rs(context, 5),
-                      ),
+                      SizedBox(width: rs(context, 5)),
 
                       // Add Medication
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/add_medications',
-                            );
+                            Navigator.pushNamed(context, '/add_medications');
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.tealGreen,
-                            minimumSize: Size(
-                              0,
-                              rs(context, 60),
-                            ),
+                            minimumSize: Size(0, rs(context, 60)),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(5),
@@ -323,10 +281,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.add,
-                                size: rs(context, 18),
-                              ),
+                              Icon(Icons.add, size: rs(context, 18)),
                               Text(
                                 'إضافة دواء جديد',
                                 style: AppFonts.inter18BoldRed.copyWith(
@@ -339,9 +294,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(
-                        width: rs(context, 5),
-                      ),
+                      SizedBox(width: rs(context, 5)),
 
                       // Delete Medication
                       Expanded(
@@ -351,10 +304,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.error,
-                            minimumSize: Size(
-                              0,
-                              rs(context, 60),
-                            ),
+                            minimumSize: Size(0, rs(context, 60)),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(5),
@@ -363,10 +313,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.delete,
-                                size: rs(context, 14),
-                              ),
+                              Icon(Icons.delete, size: rs(context, 14)),
                               Text(
                                 'حذف الدواء',
                                 style: AppFonts.inter18BoldRed.copyWith(
@@ -379,9 +326,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(
-                        width: rs(context, 5),
-                      ),
+                      SizedBox(width: rs(context, 5)),
 
                       // Pause Medication
                       Expanded(
@@ -391,10 +336,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xff8BA0BC),
-                            minimumSize: Size(
-                              0,
-                              rs(context, 60),
-                            ),
+                            minimumSize: Size(0, rs(context, 60)),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(5),
@@ -403,10 +345,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.pause,
-                                size: rs(context, 18),
-                              ),
+                              Icon(Icons.pause, size: rs(context, 18)),
                               Text(
                                 'إيقاف الدواء مؤقتا',
                                 style: AppFonts.inter18BoldRed.copyWith(
@@ -419,9 +358,7 @@ class MedicationDetailsScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(
-                        width: rs(context, 5),
-                      ),
+                      SizedBox(width: rs(context, 5)),
                     ],
                   ),
                 ),

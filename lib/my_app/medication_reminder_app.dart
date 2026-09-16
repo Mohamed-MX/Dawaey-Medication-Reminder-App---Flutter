@@ -12,6 +12,7 @@ import 'package:dawaey/Fetures/caregiver/home/presentation/view/home_caretaker_s
 import 'package:dawaey/Fetures/history/presentation/view/history_screen.dart';
 
 import 'package:dawaey/Fetures/medications/presentation/view/add_medication_screen.dart';
+import 'package:dawaey/Fetures/medications/presentation/view/medication_details_screen.dart';
 
 import 'package:dawaey/Fetures/patient/home/presentation/view/patient_main_screen.dart';
 
@@ -32,9 +33,6 @@ class MedicationReminderApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      // ============================================================
-      // DIRECTION
-      // ============================================================
 
       builder: (context, child) {
         return Directionality(
@@ -45,21 +43,9 @@ class MedicationReminderApp extends StatelessWidget {
           ),
         );
       },
-
-      // ============================================================
-      // START ROUTE
-      // ============================================================
-
       initialRoute: AppRoutes.splash,
-
-      // ============================================================
-      // ROUTES
-      // ============================================================
-
       routes: {
-        // ----------------------------------------------------------
-        // ADD MEDICATION
-        // ----------------------------------------------------------
+
 
         '/add_medications': (context) {
           final user =
@@ -89,10 +75,6 @@ class MedicationReminderApp extends StatelessWidget {
           );
         },
 
-        // ----------------------------------------------------------
-        // HISTORY
-        // ----------------------------------------------------------
-
         '/history': (context) {
           return BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
@@ -106,42 +88,22 @@ class MedicationReminderApp extends StatelessWidget {
             },
           );
         },
-
-        // ----------------------------------------------------------
-        // SPLASH
-        // ----------------------------------------------------------
-
+        '/medication_details' : (context) => MedicationDetailsScreen(),
         AppRoutes.splash: (context) {
           return const SplashScreen();
         },
-
-        // ----------------------------------------------------------
-        // ONBOARDING
-        // ----------------------------------------------------------
 
         AppRoutes.onboarding: (context) {
           return const OnboardingScreen();
         },
 
-        // ----------------------------------------------------------
-        // LOGIN
-        // ----------------------------------------------------------
-
         AppRoutes.login: (context) {
           return const LoginScreen();
         },
 
-        // ----------------------------------------------------------
-        // ROLE SELECTION
-        // ----------------------------------------------------------
-
         AppRoutes.roleSelection: (context) {
           return const RoleSelectionScreen();
         },
-
-        // ----------------------------------------------------------
-        // PATIENT SIGNUP
-        // ----------------------------------------------------------
 
         AppRoutes.patientSignup: (context) {
           return const SignupScreen(
@@ -149,9 +111,6 @@ class MedicationReminderApp extends StatelessWidget {
           );
         },
 
-        // ----------------------------------------------------------
-        // CAREGIVER SIGNUP
-        // ----------------------------------------------------------
 
         AppRoutes.caregiverSignup: (context) {
           return const SignupScreen(
@@ -159,17 +118,9 @@ class MedicationReminderApp extends StatelessWidget {
           );
         },
 
-        // ----------------------------------------------------------
-        // CAREGIVER HOME
-        // ----------------------------------------------------------
-
         AppRoutes.caregiverHome: (context) {
           return const home_caretaker_screen();
         },
-
-        // ----------------------------------------------------------
-        // PATIENT HOME
-        // ----------------------------------------------------------
 
         AppRoutes.patientHome: (context) {
           final user =
@@ -185,9 +136,6 @@ class MedicationReminderApp extends StatelessWidget {
         },
       },
 
-      // ============================================================
-      // LANGUAGE
-      // ============================================================
 
       locale: const Locale(
         'ar',
@@ -211,10 +159,6 @@ class MedicationReminderApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
         MonthYearPickerLocalizations.delegate,
       ],
-
-      // ============================================================
-      // THEME
-      // ============================================================
 
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,

@@ -584,7 +584,7 @@ class UpcomingMedicineTile extends StatelessWidget {
         onTap: () {
           Navigator.pushNamed(
             context,
-            '/add_med',
+            '/medication_details',
             arguments: upcomingDoise.medication,
           );
         },

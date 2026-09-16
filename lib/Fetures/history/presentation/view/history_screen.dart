@@ -51,10 +51,7 @@ class HistoryScreen extends StatelessWidget {
 
   Widget buildMedicationCard(HistoryDataModel item) {
     return MedicianCard(
-      name: item.medication.medicationName,
-      dose: item.medication.dosage,
-      status: item.dose.status,
-      time: item.dose.time,
+     data: item,
       primeryContainerColor: getPrimaryColor(item.dose.status),
       secondryContainerColor: getSecondaryColor(item.dose.status),
     );
@@ -74,7 +71,7 @@ class HistoryScreen extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: const NeverScrollableScrollPhysics(), // لكي لا يتعارض مع SingleChildScrollView
+      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: medicines.length,
       itemBuilder: (context, index) {
@@ -310,7 +307,6 @@ class HistoryScreen extends StatelessWidget {
             body: SafeArea(
               child: OrientationBuilder(
                 builder: (context, orientation) {
-                  // في وضع الـ Landscape نجعل الصفوف مقسمة بحيث يأخذ الكروت المساحة الكاملة بالشاشة
                   if (orientation == Orientation.landscape) {
                     return SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
@@ -325,8 +321,6 @@ class HistoryScreen extends StatelessWidget {
                       ),
                     );
                   }
-
-                  // في وضع الـ Portrait (الرأسي)
                   return Column(
                     children: [
                       buildMonthSelector(context),
