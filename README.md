@@ -58,27 +58,35 @@ A comprehensive Flutter application designed to help patients and caregivers tra
 
 ## Architecture
 
-The project follows a **Feature-Driven Architecture** to maintain strict separation of concerns, scalability, and clean code principles. The codebase is organized primarily by features, with each feature encapsulating its own architectural layers.
+The project follows a feature-first architectural approach to maintain separation of concerns:
 
-### Folder Structure
-*   `lib/Fetures/` - Contains all the core domains of the app (e.g., Auth, medications, reports, patient, caregiver).
-*   `lib/core/` - Shared utilities, generic components, themes, routing, and app-wide configurations.
-*   `lib/services/` - Global services and initializations (like notifications or global Firebase services).
+```mermaid
+graph TD
+    App[Dawaey App] --> Core[lib/core]
+    App --> Features[lib/Fetures]
+    
+    Features --> Auth[Auth]
+    Features --> Meds[medications]
+    Features --> Patient[patient]
+    Features --> Caregiver[caregiver]
+    Features --> Reports[reports]
+    Features --> History[history]
+    
+    Meds --> Pres[presentation]
+    Meds --> DataLayer[data]
+    Meds --> Serv[services]
+    
+    Pres --> View[view]
+    Pres --> Widgets[widgets]
+    Pres --> ViewModel[view_model / cubit]
+    
+    DataLayer --> Repos[repositories]
+    DataLayer --> Models[models]
+```
 
-### Internal Feature Layers
-Inside most features within the `lib/Fetures/` directory, the code is structured into layers:
-*   **presentation/**: 
-    *   `view/`: Screens and pages.
-    *   `widgets/`: UI components specific to the feature.
-    *   State Management (e.g., `cubit/` or `manager/`): BLoC or Cubit classes for state management.
-*   **data/**: 
-    *   `models/`: Data structures and serialization logic.
-    *   `repositories/`: Abstractions over data sources (local caching and remote Firebase calls).
-*   **services/**: Feature-specific business logic or API interactions.
-
-### Key Features Modules
-*   **Auth**: Authentication, user roles, login, signup, and onboarding flow.
-*   **medications**: Medication tracking, scheduling, and UI for adding or managing meds.
-*   **patient** & **caregiver**: Distinct dashboards and flows tailored for the two user roles.
-*   **reports**: Statistics calculation, data aggregation, and chart plotting for adherence.
-*   **history**: Historical logs and past medication records.
+*   `lib/Features/Auth`: Authentication, Login, Signup, Onboarding.
+*   `lib/Features/medications`: Medication models, services, and UI screens for adding/managing meds.
+*   `lib/Features/patient` & `lib/Features/caregiver`: Role-specific home screens and dashboards.
+*   `lib/Features/reports`: Logic and UI for adherence statistics and charts.
+*   `lib/Features/history`: Past records UI.
+*   `lib/core`: Shared utilities, themes, routing, and configurations.
