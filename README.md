@@ -1,6 +1,13 @@
-# Dawaey (دوائي) - Medication Reminder App
-
+ <h1>Dawaey-Medication-Reminder-App 💊</h1>
 A comprehensive Flutter application designed to help patients and caregivers track and manage medication schedules effectively. The app features a role-based system for both patients and their caregivers to ensure medication adherence.
+
+## 📱 Screenshots
+ <tr>
+<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 4 27 34 PM" src="https://github.com/user-attachments/assets/009f3ebf-b87e-4780-aa4b-e68c7f073b33" />
+<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 6 52 16 PM" src="https://github.com/user-attachments/assets/48d54c13-85f1-45c4-9f4a-e04d8391657b" />
+<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 6 52 17 PM" src="https://github.com/user-attachments/assets/f27e7c9e-2513-4c1e-9153-a33d23ac8b63" />
+
+
 
 ## Features
 
