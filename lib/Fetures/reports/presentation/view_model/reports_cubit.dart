@@ -92,9 +92,13 @@ class ReportsCubit extends Cubit<ReportsState> {
       final now = DateTime.now();
 
       for (int i = 0; i < 7; i++) {
-        final dayDoses = doses.where((d) => d.date.weekday == ((i + 6) % 7 + 1)).toList();
+        final dayDoses = doses
+            .where((d) => d.date.weekday == ((i + 6) % 7 + 1))
+            .toList();
         if (dayDoses.isNotEmpty) {
-          final dayTaken = dayDoses.where((d) => d.status == DoseStatus.taken).length;
+          final dayTaken = dayDoses
+              .where((d) => d.status == DoseStatus.taken)
+              .length;
           weeklyData[i] = dayTaken / dayDoses.length;
         }
       }
@@ -151,18 +155,22 @@ class ReportsCubit extends Cubit<ReportsState> {
             ),
           );
 
-          final hourStr = dose.time.hourOfPeriod == 0 ? 12 : dose.time.hourOfPeriod;
+          final hourStr = dose.time.hourOfPeriod == 0
+              ? 12
+              : dose.time.hourOfPeriod;
           final periodStr = dose.time.period == DayPeriod.am ? 'ص' : 'م';
           final minuteStr = dose.time.minute.toString().padLeft(2, '0');
           final timeFormatted = '$hourStr:$minuteStr $periodStr';
 
-          todayMedications.add(TodayMedicationReport(
-            id: dose.id,
-            name: med.medicationName,
-            dosage: med.dosage,
-            time: timeFormatted,
-            status: dose.status.name,
-          ));
+          todayMedications.add(
+            TodayMedicationReport(
+              id: dose.id,
+              name: med.medicationName,
+              dosage: med.dosage,
+              time: timeFormatted,
+              status: dose.status.name,
+            ),
+          );
         }
       }
 
@@ -174,19 +182,29 @@ class ReportsCubit extends Cubit<ReportsState> {
         weeklyData: weeklyData,
       );
 
-      final defaultWeeklyLabels = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+      final defaultWeeklyLabels = [
+        'السبت',
+        'الأحد',
+        'الاثنين',
+        'الثلاثاء',
+        'الأربعاء',
+        'الخميس',
+        'الجمعة',
+      ];
 
-      emit(ReportsSuccess(
-        summary: summary,
-        todayMedications: todayMedications,
-        selectedPeriod: 'أسبوعي',
-        patientName: patientName,
-        patientAge: patientAge,
-        chartLabels: defaultWeeklyLabels,
-        chartData: weeklyData,
-        chartHeaderTitle: 'الأسبوع الحالي',
-        allDoses: doses,
-      ));
+      emit(
+        ReportsSuccess(
+          summary: summary,
+          todayMedications: todayMedications,
+          selectedPeriod: 'أسبوعي',
+          patientName: patientName,
+          patientAge: patientAge,
+          chartLabels: defaultWeeklyLabels,
+          chartData: weeklyData,
+          chartHeaderTitle: 'الأسبوع الحالي',
+          allDoses: doses,
+        ),
+      );
     } catch (e) {
       emit(ReportsError('فشل تحميل التقارير من الفايربيز: $e'));
     }
@@ -208,50 +226,81 @@ class ReportsCubit extends Cubit<ReportsState> {
         headerTitle = 'اليوم الحالي';
         labels = ['12-4 ص', '4-8 ص', '8-12 ص', '12-4 م', '4-8 م', '8-12 م'];
         data = _calculateDailyTimeSlotsData(currentState.allDoses);
-        periodDoses = currentState.allDoses.where((d) =>
-            d.date.year == now.year &&
-            d.date.month == now.month &&
-            d.date.day == now.day).toList();
+        periodDoses = currentState.allDoses
+            .where(
+              (d) =>
+                  d.date.year == now.year &&
+                  d.date.month == now.month &&
+                  d.date.day == now.day,
+            )
+            .toList();
         break;
 
       case 'شهري':
         headerTitle = 'الشهر الحالي';
         labels = ['أسبوع 1', 'أسبوع 2', 'أسبوع 3', 'أسبوع 4'];
         data = _calculateMonthlyWeeksData(currentState.allDoses);
-        periodDoses = currentState.allDoses.where((d) =>
-            d.date.year == now.year && d.date.month == now.month).toList();
+        periodDoses = currentState.allDoses
+            .where((d) => d.date.year == now.year && d.date.month == now.month)
+            .toList();
         break;
 
       case 'سنوي':
         headerTitle = 'السنة الحالية';
         labels = ['يناير', 'مارس', 'مايو', 'يوليو', 'سبتمبر', 'نوفمبر'];
         data = _calculateYearlyMonthsData(currentState.allDoses);
-        periodDoses = currentState.allDoses.where((d) => d.date.year == now.year).toList();
+        periodDoses = currentState.allDoses
+            .where((d) => d.date.year == now.year)
+            .toList();
         break;
 
       case 'أسبوعي':
       default:
         headerTitle = 'الأسبوع الحالي';
-        labels = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+        labels = [
+          'السبت',
+          'الأحد',
+          'الاثنين',
+          'الثلاثاء',
+          'الأربعاء',
+          'الخميس',
+          'الجمعة',
+        ];
         data = currentState.summary.weeklyData;
         final weekStart = now.subtract(const Duration(days: 7));
-        periodDoses = currentState.allDoses.where((d) =>
-            d.date.isAfter(weekStart) || d.date.isAtSameMomentAs(weekStart)).toList();
+        periodDoses = currentState.allDoses
+            .where(
+              (d) =>
+                  d.date.isAfter(weekStart) ||
+                  d.date.isAtSameMomentAs(weekStart),
+            )
+            .toList();
         break;
     }
 
     int taken = periodDoses.where((d) => d.status == DoseStatus.taken).length;
     int missed = periodDoses.where((d) => d.status == DoseStatus.missed).length;
-    int pending = periodDoses.where((d) => d.status == DoseStatus.pending).length;
+    int pending = periodDoses
+        .where((d) => d.status == DoseStatus.pending)
+        .length;
     int total = periodDoses.length;
 
     // Smooth proportional numbers for preview if data in period is sparse
     if (period == 'يومي' && total == 0) {
-      taken = 2; missed = 1; pending = 1; total = 4;
+      taken = 2;
+      missed = 1;
+      pending = 1;
+      total = 4;
     } else if (period == 'شهري' && total < 10) {
-      taken = 120; missed = 14; pending = 2; total = 136;
+      taken = 120;
+      missed = 14;
+      pending = 2;
+      total = 136;
     } else if (period == 'سنوي' && total < 20) {
-      taken = 1420; missed = 160; pending = 5; total = 1585;
+      taken = 1420;
+      missed = 160;
+      pending = 5;
+      total = 1585;
     }
 
     int commitment = total == 0 ? 0 : ((taken / total) * 100).round();
@@ -264,30 +313,43 @@ class ReportsCubit extends Cubit<ReportsState> {
       weeklyData: currentState.summary.weeklyData,
     );
 
-    emit(currentState.copyWith(
-      summary: updatedSummary,
-      selectedPeriod: period,
-      chartLabels: labels,
-      chartData: data,
-      chartHeaderTitle: headerTitle,
-    ));
+    emit(
+      currentState.copyWith(
+        summary: updatedSummary,
+        selectedPeriod: period,
+        chartLabels: labels,
+        chartData: data,
+        chartHeaderTitle: headerTitle,
+      ),
+    );
   }
 
   List<double> _calculateDailyTimeSlotsData(List<MedicationDoseModel> doses) {
     final now = DateTime.now();
-    final todayDoses = doses.where((d) =>
-        d.date.year == now.year &&
-        d.date.month == now.month &&
-        d.date.day == now.day).toList();
+    final todayDoses = doses
+        .where(
+          (d) =>
+              d.date.year == now.year &&
+              d.date.month == now.month &&
+              d.date.day == now.day,
+        )
+        .toList();
 
-    List<double> slotData = List.filled(6, 0.85); // default fallback height for smooth bars
+    List<double> slotData = List.filled(
+      6,
+      0.85,
+    ); // default fallback height for smooth bars
     for (int i = 0; i < 6; i++) {
       final startHour = i * 4;
       final endHour = (i + 1) * 4;
-      final slotDoses = todayDoses.where((d) => d.time.hour >= startHour && d.time.hour < endHour).toList();
+      final slotDoses = todayDoses
+          .where((d) => d.time.hour >= startHour && d.time.hour < endHour)
+          .toList();
 
       if (slotDoses.isNotEmpty) {
-        final taken = slotDoses.where((d) => d.status == DoseStatus.taken).length;
+        final taken = slotDoses
+            .where((d) => d.status == DoseStatus.taken)
+            .length;
         slotData[i] = taken / slotDoses.length;
       }
     }
@@ -296,14 +358,17 @@ class ReportsCubit extends Cubit<ReportsState> {
 
   List<double> _calculateMonthlyWeeksData(List<MedicationDoseModel> doses) {
     final now = DateTime.now();
-    final monthDoses = doses.where((d) =>
-        d.date.year == now.year && d.date.month == now.month).toList();
+    final monthDoses = doses
+        .where((d) => d.date.year == now.year && d.date.month == now.month)
+        .toList();
 
     List<double> weekData = [0.85, 0.90, 0.78, 0.88];
     for (int w = 0; w < 4; w++) {
       final startDay = w * 7 + 1;
       final endDay = (w == 3) ? 31 : (w + 1) * 7;
-      final wDoses = monthDoses.where((d) => d.date.day >= startDay && d.date.day <= endDay).toList();
+      final wDoses = monthDoses
+          .where((d) => d.date.day >= startDay && d.date.day <= endDay)
+          .toList();
 
       if (wDoses.isNotEmpty) {
         final taken = wDoses.where((d) => d.status == DoseStatus.taken).length;
@@ -319,7 +384,9 @@ class ReportsCubit extends Cubit<ReportsState> {
 
     List<double> monthData = [0.80, 0.85, 0.90, 0.75, 0.88, 0.92];
     for (int m = 0; m < 6; m++) {
-      final mDoses = yearDoses.where((d) => (d.date.month - 1) ~/ 2 == m).toList();
+      final mDoses = yearDoses
+          .where((d) => (d.date.month - 1) ~/ 2 == m)
+          .toList();
       if (mDoses.isNotEmpty) {
         final taken = mDoses.where((d) => d.status == DoseStatus.taken).length;
         monthData[m] = taken / mDoses.length;
@@ -337,7 +404,11 @@ class ReportsCubit extends Cubit<ReportsState> {
       final batch = _firestore.batch();
 
       // 1. Patient Record
-      final patientRef = _firestore.collection('users').doc(uid).collection('patients').doc('patient_1');
+      final patientRef = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('patients')
+          .doc('patient_1');
       batch.set(patientRef, {
         'id': 'patient_1',
         'name': 'أحمد محمد',
@@ -346,7 +417,11 @@ class ReportsCubit extends Cubit<ReportsState> {
       });
 
       // 2. Medication 1 (أسبرين)
-      final med1Ref = _firestore.collection('users').doc(uid).collection('medications').doc('med_aspirin');
+      final med1Ref = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('medications')
+          .doc('med_aspirin');
       batch.set(med1Ref, {
         'id': 'med_aspirin',
         'patientId': 'patient_1',
@@ -356,10 +431,14 @@ class ReportsCubit extends Cubit<ReportsState> {
         'frequency': 'twiceDaily',
         'intakeTimes': [
           {'hour': 8, 'minute': 0},
-          {'hour': 20, 'minute': 0}
+          {'hour': 20, 'minute': 0},
         ],
-        'startDate': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 10))),
-        'endDate': Timestamp.fromDate(DateTime.now().add(const Duration(days: 20))),
+        'startDate': Timestamp.fromDate(
+          DateTime.now().subtract(const Duration(days: 10)),
+        ),
+        'endDate': Timestamp.fromDate(
+          DateTime.now().add(const Duration(days: 20)),
+        ),
         'remainingDoses': 30,
         'remainingMedicationAmount': 30,
         'notes': 'بعد الأكل',
@@ -367,7 +446,11 @@ class ReportsCubit extends Cubit<ReportsState> {
       });
 
       // 3. Medication 2 (ميتفورمين)
-      final med2Ref = _firestore.collection('users').doc(uid).collection('medications').doc('med_metformin');
+      final med2Ref = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('medications')
+          .doc('med_metformin');
       batch.set(med2Ref, {
         'id': 'med_metformin',
         'patientId': 'patient_1',
@@ -377,10 +460,14 @@ class ReportsCubit extends Cubit<ReportsState> {
         'frequency': 'twiceDaily',
         'intakeTimes': [
           {'hour': 13, 'minute': 0},
-          {'hour': 18, 'minute': 0}
+          {'hour': 18, 'minute': 0},
         ],
-        'startDate': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 10))),
-        'endDate': Timestamp.fromDate(DateTime.now().add(const Duration(days: 20))),
+        'startDate': Timestamp.fromDate(
+          DateTime.now().subtract(const Duration(days: 10)),
+        ),
+        'endDate': Timestamp.fromDate(
+          DateTime.now().add(const Duration(days: 20)),
+        ),
         'remainingDoses': 30,
         'remainingMedicationAmount': 30,
         'notes': 'مع الطعام',
@@ -392,14 +479,42 @@ class ReportsCubit extends Cubit<ReportsState> {
 
       // Today's Doses
       final todayDoses = [
-        {'id': 'd_today_1', 'medId': 'med_aspirin', 'hour': 8, 'min': 0, 'status': 'taken'},
-        {'id': 'd_today_2', 'medId': 'med_metformin', 'hour': 13, 'min': 0, 'status': 'taken'},
-        {'id': 'd_today_3', 'medId': 'med_metformin', 'hour': 18, 'min': 0, 'status': 'missed'},
-        {'id': 'd_today_4', 'medId': 'med_aspirin', 'hour': 20, 'min': 0, 'status': 'pending'},
+        {
+          'id': 'd_today_1',
+          'medId': 'med_aspirin',
+          'hour': 8,
+          'min': 0,
+          'status': 'taken',
+        },
+        {
+          'id': 'd_today_2',
+          'medId': 'med_metformin',
+          'hour': 13,
+          'min': 0,
+          'status': 'taken',
+        },
+        {
+          'id': 'd_today_3',
+          'medId': 'med_metformin',
+          'hour': 18,
+          'min': 0,
+          'status': 'missed',
+        },
+        {
+          'id': 'd_today_4',
+          'medId': 'med_aspirin',
+          'hour': 20,
+          'min': 0,
+          'status': 'pending',
+        },
       ];
 
       for (var d in todayDoses) {
-        final dRef = _firestore.collection('users').doc(uid).collection('doses').doc(d['id'] as String);
+        final dRef = _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('doses')
+            .doc(d['id'] as String);
         batch.set(dRef, {
           'id': d['id'],
           'medicationId': d['medId'],
@@ -419,11 +534,17 @@ class ReportsCubit extends Cubit<ReportsState> {
           final doseId = 'd_past_$doseCounter';
           doseCounter++;
 
-          final dRef = _firestore.collection('users').doc(uid).collection('doses').doc(doseId);
+          final dRef = _firestore
+              .collection('users')
+              .doc(uid)
+              .collection('doses')
+              .doc(doseId);
           batch.set(dRef, {
             'id': doseId,
             'medicationId': medId,
-            'date': Timestamp.fromDate(DateTime(dayDate.year, dayDate.month, dayDate.day)),
+            'date': Timestamp.fromDate(
+              DateTime(dayDate.year, dayDate.month, dayDate.day),
+            ),
             'time': {'hour': h, 'minute': 0},
             'status': status,
           });
@@ -434,3 +555,4 @@ class ReportsCubit extends Cubit<ReportsState> {
     } catch (_) {}
   }
 }
+//gfh
