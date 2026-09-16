@@ -450,51 +450,16 @@ class ReportsBody extends StatelessWidget {
         border: Border.all(color: const Color(0xFFEDF3F7)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Status Pill Tag
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusBg,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(statusIcon, size: 14, color: statusText),
-                const SizedBox(width: 4),
-                Text(
-                  statusLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: statusText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Time
-          Row(
-            children: [
-              const Icon(Icons.access_time, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                med.time,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          // Medication Name & Icon
+          // Medication Name & Icon (right side in RTL)
           Expanded(
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                const Icon(Icons.medication, color: Color(0xFF169B88), size: 22),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         med.name,
@@ -515,8 +480,43 @@ class ReportsBody extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(Icons.medication, color: Color(0xFF169B88), size: 22),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Time
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.access_time, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                med.time,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          // Status Pill Tag
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(statusIcon, size: 14, color: statusText),
+                const SizedBox(width: 4),
+                Text(
+                  statusLabel,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: statusText,
+                  ),
+                ),
               ],
             ),
           ),

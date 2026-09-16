@@ -32,8 +32,11 @@ class HistoryCubit extends Cubit<HistoryState> {
   void selectDate(DateTime date, UserModel currentUser) {
     selected = date;
 
+    requiredMonth = DateTime(date.year, date.month);
+
     getRelativeMediciensWithDate(date, currentUser);
   }
+
 
   Future<void> getRelativeMediciensWithDate(
     DateTime date,
