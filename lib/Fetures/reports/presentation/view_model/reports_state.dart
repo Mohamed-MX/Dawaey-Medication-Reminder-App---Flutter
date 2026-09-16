@@ -12,7 +12,7 @@ class ReportsSuccess extends ReportsState {
   final List<TodayMedicationReport> todayMedications;
   final String selectedPeriod;
   final String patientName;
-  final int patientAge;
+  final int? patientAge;
   final List<String> chartLabels;
   final List<double> chartData;
   final String chartHeaderTitle;
@@ -22,8 +22,8 @@ class ReportsSuccess extends ReportsState {
     required this.summary,
     required this.todayMedications,
     this.selectedPeriod = 'أسبوعي',
-    this.patientName = 'أحمد محمد',
-    this.patientAge = 72,
+    this.patientName = 'مستخدم',
+    this.patientAge,
     required this.chartLabels,
     required this.chartData,
     this.chartHeaderTitle = 'الأسبوع الحالي',

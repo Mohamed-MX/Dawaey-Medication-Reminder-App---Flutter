@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../Auth/data/local/auth_local_storage.dart';
+import '../../../Auth/data/models/user_model.dart';
 import '../../../medications/data/model/doise_model.dart';
 import '../../../medications/data/model/medication_model.dart';
 import '../../data/models/report_model.dart';
@@ -12,55 +13,76 @@ class ReportsCubit extends Cubit<ReportsState> {
 
   ReportsCubit() : super(ReportsInitial());
 
-  String? _getUid() {
-    return AuthLocalStorage.getUser()?.uid;
+  /// Returns the currently logged-in user, or null.
+  UserModel? _getUser() {
+    return AuthLocalStorage.getUser();
+  }
+
+  /// Resolves the patient whose data should be displayed.
+  /// - If the user is a patient → their own uid.
+  /// - If the user is a caregiver → the linkedUserId.
+  String? _resolvePatientId(UserModel user) {
+    if (user.role == UserRole.patient) {
+      return user.uid;
+    }
+    // Caregiver: use the linked patient's uid
+    if (user.role == UserRole.caregiver) {
+      return (user.linkedUserId != null && user.linkedUserId!.isNotEmpty)
+          ? user.linkedUserId
+          : user.uid;
+    }
+    return user.uid;
   }
 
   Future<void> loadReportsData() async {
     emit(ReportsLoading());
-    final uid = _getUid();
 
-    if (uid == null) {
+    final user = _getUser();
+    if (user == null) {
       emit(ReportsError('المستخدم غير مسجل الدخول'));
       return;
     }
 
+    final patientId = _resolvePatientId(user);
+    if (patientId == null || patientId.isEmpty) {
+      emit(ReportsError('لا يمكن تحديد المريض'));
+      return;
+    }
+
     try {
-      // Check if doses collection has documents; if empty, seed sample documents directly into Firebase
-      final initialDosesCheck = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('doses')
-          .limit(1)
-          .get();
+      // 1. Patient display name — use the logged-in user's name
+      String patientName = user.name.isNotEmpty ? user.name : 'مستخدم';
 
-      if (initialDosesCheck.docs.isEmpty) {
-        await seedSampleDataToFirebase();
-      }
+      // Try to get age from the patients subcollection (if available)
+      int? patientAge;
+      try {
+        final patientSnapshot = await _firestore
+            .collection('users')
+            .doc(patientId)
+            .collection('patients')
+            .limit(1)
+            .get();
 
-      // 1. Fetch patient info from Firestore
-      String patientName = 'أحمد محمد';
-      int patientAge = 72;
-
-      final patientSnapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('patients')
-          .limit(1)
-          .get();
-
-      if (patientSnapshot.docs.isNotEmpty) {
-        final data = patientSnapshot.docs.first.data();
-        patientName = data['name'] ?? patientName;
-        if (data['age'] != null) {
-          patientAge = (data['age'] as num).toInt();
+        if (patientSnapshot.docs.isNotEmpty) {
+          final data = patientSnapshot.docs.first.data();
+          if (data['age'] != null) {
+            patientAge = (data['age'] as num).toInt();
+          }
+          // If the user is a caregiver, show the patient's name
+          if (user.role == UserRole.caregiver &&
+              data['name'] != null &&
+              (data['name'] as String).isNotEmpty) {
+            patientName = data['name'] as String;
+          }
         }
+      } catch (_) {
+        // Ignore — age is optional
       }
 
-      // 2. Fetch all doses from Firestore
+      // 2. Fetch ALL doses for this patient from Firestore
       final dosesSnapshot = await _firestore
           .collection('users')
-          .doc(uid)
+          .doc(patientId)
           .collection('doses')
           .get();
 
@@ -68,96 +90,56 @@ class ReportsCubit extends Cubit<ReportsState> {
           .map((doc) => MedicationDoseModel.fromMap(doc.data()))
           .toList();
 
-      int takenCount = 0;
-      int missedCount = 0;
-      int pendingCount = 0;
-
-      for (var dose in doses) {
-        if (dose.status == DoseStatus.taken) {
-          takenCount++;
-        } else if (dose.status == DoseStatus.missed) {
-          missedCount++;
-        } else if (dose.status == DoseStatus.pending) {
-          pendingCount++;
-        }
-      }
-
-      int totalDoses = doses.length;
-      int commitmentPercentage = totalDoses == 0
-          ? 0
-          : ((takenCount / totalDoses) * 100).round();
-
-      // 3. Compute weekly commitment ratios (Sat to Fri)
-      List<double> weeklyData = List.filled(7, 0.85);
+      // 3. Compute weekly commitment ratios (Sat=1 to Fri=7 in our mapping)
       final now = DateTime.now();
+      List<double> weeklyData = _calculateWeeklyData(doses);
 
-      for (int i = 0; i < 7; i++) {
-        final dayDoses = doses
-            .where((d) => d.date.weekday == ((i + 6) % 7 + 1))
-            .toList();
-        if (dayDoses.isNotEmpty) {
-          final dayTaken = dayDoses
-              .where((d) => d.status == DoseStatus.taken)
-              .length;
-          weeklyData[i] = dayTaken / dayDoses.length;
-        }
-      }
-
-      // 4. Fetch Today's Medications & Doses from Firestore
+      // 5. Fetch Today's Medications & Doses
       final todayStart = DateTime(now.year, now.month, now.day);
       final todayEnd = todayStart.add(const Duration(days: 1));
 
-      final todayDosesSnapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('doses')
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
-          .where('date', isLessThan: Timestamp.fromDate(todayEnd))
-          .get();
-
-      final todayDoses = todayDosesSnapshot.docs
-          .map((doc) => MedicationDoseModel.fromMap(doc.data()))
-          .toList();
+      final todayDoses = doses.where((d) {
+        final doseDate = DateTime(d.date.year, d.date.month, d.date.day);
+        return !doseDate.isBefore(todayStart) && doseDate.isBefore(todayEnd);
+      }).toList();
 
       List<TodayMedicationReport> todayMedications = [];
 
       if (todayDoses.isNotEmpty) {
+        // Get the medication IDs from today's doses
         final medIds = todayDoses.map((d) => d.medicationId).toSet().toList();
 
-        final medsSnapshot = await _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('medications')
-            .where(FieldPath.documentId, whereIn: medIds)
-            .get();
+        // Firestore whereIn limit is 10, batch if needed
+        List<MedicationModel> medications = [];
+        for (int i = 0; i < medIds.length; i += 10) {
+          final batch = medIds.sublist(
+            i,
+            i + 10 > medIds.length ? medIds.length : i + 10,
+          );
+          final medsSnapshot = await _firestore
+              .collection('users')
+              .doc(patientId)
+              .collection('medications')
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
 
-        final medications = medsSnapshot.docs
-            .map((doc) => MedicationModel.fromMap(doc.data()))
-            .toList();
+          medications.addAll(
+            medsSnapshot.docs
+                .map((doc) => MedicationModel.fromMap(doc.data()))
+                .toList(),
+          );
+        }
 
         for (var dose in todayDoses) {
-          final med = medications.firstWhere(
-            (m) => m.id == dose.medicationId,
-            orElse: () => MedicationModel(
-              id: dose.medicationId,
-              patientId: '',
-              medicationName: 'دواء',
-              administrationRoute: '',
-              dosage: '',
-              frequency: MedicationFrequency.onceDaily,
-              intakeTimes: [],
-              startDate: DateTime.now(),
-              endDate: DateTime.now(),
-              remainingDoses: 0,
-              remainingMedicationAmount: 0,
-              notes: '',
-              status: MedicationStatus.active,
-            ),
-          );
+          MedicationModel? med;
+          try {
+            med = medications.firstWhere((m) => m.id == dose.medicationId);
+          } catch (_) {
+            med = null;
+          }
 
-          final hourStr = dose.time.hourOfPeriod == 0
-              ? 12
-              : dose.time.hourOfPeriod;
+          final hourStr =
+              dose.time.hourOfPeriod == 0 ? 12 : dose.time.hourOfPeriod;
           final periodStr = dose.time.period == DayPeriod.am ? 'ص' : 'م';
           final minuteStr = dose.time.minute.toString().padLeft(2, '0');
           final timeFormatted = '$hourStr:$minuteStr $periodStr';
@@ -165,8 +147,8 @@ class ReportsCubit extends Cubit<ReportsState> {
           todayMedications.add(
             TodayMedicationReport(
               id: dose.id,
-              name: med.medicationName,
-              dosage: med.dosage,
+              name: med?.medicationName ?? 'دواء غير معروف',
+              dosage: med?.dosage ?? '',
               time: timeFormatted,
               status: dose.status.name,
             ),
@@ -174,11 +156,25 @@ class ReportsCubit extends Cubit<ReportsState> {
         }
       }
 
+      // Compute stats scoped to the default period (weekly)
+      final weekStart = now.subtract(const Duration(days: 7));
+      final weekDoses = doses.where((d) =>
+          d.date.isAfter(weekStart) || d.date.isAtSameMomentAs(weekStart));
+      final weekTaken =
+          weekDoses.where((d) => d.status == DoseStatus.taken).length;
+      final weekMissed =
+          weekDoses.where((d) => d.status == DoseStatus.missed).length;
+      final weekPending =
+          weekDoses.where((d) => d.status == DoseStatus.pending).length;
+      final weekTotal = weekDoses.length;
+      final weekCommitment =
+          weekTotal == 0 ? 0 : ((weekTaken / weekTotal) * 100).round();
+
       final summary = ReportSummaryModel(
-        commitmentPercentage: commitmentPercentage,
-        takenCount: takenCount,
-        missedCount: missedCount,
-        pendingCount: pendingCount,
+        commitmentPercentage: weekCommitment,
+        takenCount: weekTaken,
+        missedCount: weekMissed,
+        pendingCount: weekPending,
         weeklyData: weeklyData,
       );
 
@@ -206,7 +202,7 @@ class ReportsCubit extends Cubit<ReportsState> {
         ),
       );
     } catch (e) {
-      emit(ReportsError('فشل تحميل التقارير من الفايربيز: $e'));
+      emit(ReportsError('فشل تحميل التقارير: $e'));
     }
   }
 
@@ -241,7 +237,8 @@ class ReportsCubit extends Cubit<ReportsState> {
         labels = ['أسبوع 1', 'أسبوع 2', 'أسبوع 3', 'أسبوع 4'];
         data = _calculateMonthlyWeeksData(currentState.allDoses);
         periodDoses = currentState.allDoses
-            .where((d) => d.date.year == now.year && d.date.month == now.month)
+            .where(
+                (d) => d.date.year == now.year && d.date.month == now.month)
             .toList();
         break;
 
@@ -266,7 +263,7 @@ class ReportsCubit extends Cubit<ReportsState> {
           'الخميس',
           'الجمعة',
         ];
-        data = currentState.summary.weeklyData;
+        data = _calculateWeeklyData(currentState.allDoses);
         final weekStart = now.subtract(const Duration(days: 7));
         periodDoses = currentState.allDoses
             .where(
@@ -279,29 +276,11 @@ class ReportsCubit extends Cubit<ReportsState> {
     }
 
     int taken = periodDoses.where((d) => d.status == DoseStatus.taken).length;
-    int missed = periodDoses.where((d) => d.status == DoseStatus.missed).length;
-    int pending = periodDoses
-        .where((d) => d.status == DoseStatus.pending)
-        .length;
+    int missed =
+        periodDoses.where((d) => d.status == DoseStatus.missed).length;
+    int pending =
+        periodDoses.where((d) => d.status == DoseStatus.pending).length;
     int total = periodDoses.length;
-
-    // Smooth proportional numbers for preview if data in period is sparse
-    if (period == 'يومي' && total == 0) {
-      taken = 2;
-      missed = 1;
-      pending = 1;
-      total = 4;
-    } else if (period == 'شهري' && total < 10) {
-      taken = 120;
-      missed = 14;
-      pending = 2;
-      total = 136;
-    } else if (period == 'سنوي' && total < 20) {
-      taken = 1420;
-      missed = 160;
-      pending = 5;
-      total = 1585;
-    }
 
     int commitment = total == 0 ? 0 : ((taken / total) * 100).round();
 
@@ -324,6 +303,32 @@ class ReportsCubit extends Cubit<ReportsState> {
     );
   }
 
+  /// Calculates weekly bar chart data: commitment ratio per day of the week
+  /// for the current week (last 7 days).
+  List<double> _calculateWeeklyData(List<MedicationDoseModel> doses) {
+    final now = DateTime.now();
+    final weekStart = now.subtract(const Duration(days: 7));
+
+    final weekDoses = doses.where((d) =>
+        d.date.isAfter(weekStart) || d.date.isAtSameMomentAs(weekStart));
+
+    // Saturday=6 in Dart (1=Mon..7=Sun), map to index 0-6 (Sat-Fri)
+    List<double> weeklyData = List.filled(7, 0.0);
+
+    for (int i = 0; i < 7; i++) {
+      // Map index to Dart weekday: Sat=6, Sun=7, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5
+      final dartWeekday = (i + 6) % 7 + 1;
+      final dayDoses =
+          weekDoses.where((d) => d.date.weekday == dartWeekday).toList();
+      if (dayDoses.isNotEmpty) {
+        final dayTaken =
+            dayDoses.where((d) => d.status == DoseStatus.taken).length;
+        weeklyData[i] = dayTaken / dayDoses.length;
+      }
+    }
+    return weeklyData;
+  }
+
   List<double> _calculateDailyTimeSlotsData(List<MedicationDoseModel> doses) {
     final now = DateTime.now();
     final todayDoses = doses
@@ -335,10 +340,7 @@ class ReportsCubit extends Cubit<ReportsState> {
         )
         .toList();
 
-    List<double> slotData = List.filled(
-      6,
-      0.85,
-    ); // default fallback height for smooth bars
+    List<double> slotData = List.filled(6, 0.0);
     for (int i = 0; i < 6; i++) {
       final startHour = i * 4;
       final endHour = (i + 1) * 4;
@@ -347,9 +349,8 @@ class ReportsCubit extends Cubit<ReportsState> {
           .toList();
 
       if (slotDoses.isNotEmpty) {
-        final taken = slotDoses
-            .where((d) => d.status == DoseStatus.taken)
-            .length;
+        final taken =
+            slotDoses.where((d) => d.status == DoseStatus.taken).length;
         slotData[i] = taken / slotDoses.length;
       }
     }
@@ -362,7 +363,7 @@ class ReportsCubit extends Cubit<ReportsState> {
         .where((d) => d.date.year == now.year && d.date.month == now.month)
         .toList();
 
-    List<double> weekData = [0.85, 0.90, 0.78, 0.88];
+    List<double> weekData = List.filled(4, 0.0);
     for (int w = 0; w < 4; w++) {
       final startDay = w * 7 + 1;
       final endDay = (w == 3) ? 31 : (w + 1) * 7;
@@ -371,7 +372,8 @@ class ReportsCubit extends Cubit<ReportsState> {
           .toList();
 
       if (wDoses.isNotEmpty) {
-        final taken = wDoses.where((d) => d.status == DoseStatus.taken).length;
+        final taken =
+            wDoses.where((d) => d.status == DoseStatus.taken).length;
         weekData[w] = taken / wDoses.length;
       }
     }
@@ -382,178 +384,16 @@ class ReportsCubit extends Cubit<ReportsState> {
     final now = DateTime.now();
     final yearDoses = doses.where((d) => d.date.year == now.year).toList();
 
-    List<double> monthData = [0.80, 0.85, 0.90, 0.75, 0.88, 0.92];
+    List<double> monthData = List.filled(6, 0.0);
     for (int m = 0; m < 6; m++) {
-      final mDoses = yearDoses
-          .where((d) => (d.date.month - 1) ~/ 2 == m)
-          .toList();
+      final mDoses =
+          yearDoses.where((d) => (d.date.month - 1) ~/ 2 == m).toList();
       if (mDoses.isNotEmpty) {
-        final taken = mDoses.where((d) => d.status == DoseStatus.taken).length;
+        final taken =
+            mDoses.where((d) => d.status == DoseStatus.taken).length;
         monthData[m] = taken / mDoses.length;
       }
     }
     return monthData;
   }
-
-  /// Adds actual sample data directly into Firebase Firestore for testing & presentation
-  Future<void> seedSampleDataToFirebase() async {
-    final uid = _getUid();
-    if (uid == null) return;
-
-    try {
-      final batch = _firestore.batch();
-
-      // 1. Patient Record
-      final patientRef = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('patients')
-          .doc('patient_1');
-      batch.set(patientRef, {
-        'id': 'patient_1',
-        'name': 'أحمد محمد',
-        'relationship': 'أبي',
-        'age': 72,
-      });
-
-      // 2. Medication 1 (أسبرين)
-      final med1Ref = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medications')
-          .doc('med_aspirin');
-      batch.set(med1Ref, {
-        'id': 'med_aspirin',
-        'patientId': 'patient_1',
-        'medicationName': 'أسبرين',
-        'dosage': '81 ملجم',
-        'administrationRoute': 'فمي',
-        'frequency': 'twiceDaily',
-        'intakeTimes': [
-          {'hour': 8, 'minute': 0},
-          {'hour': 20, 'minute': 0},
-        ],
-        'startDate': Timestamp.fromDate(
-          DateTime.now().subtract(const Duration(days: 10)),
-        ),
-        'endDate': Timestamp.fromDate(
-          DateTime.now().add(const Duration(days: 20)),
-        ),
-        'remainingDoses': 30,
-        'remainingMedicationAmount': 30,
-        'notes': 'بعد الأكل',
-        'status': 'active',
-      });
-
-      // 3. Medication 2 (ميتفورمين)
-      final med2Ref = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medications')
-          .doc('med_metformin');
-      batch.set(med2Ref, {
-        'id': 'med_metformin',
-        'patientId': 'patient_1',
-        'medicationName': 'ميتفورمين',
-        'dosage': '500 ملجم',
-        'administrationRoute': 'فمي',
-        'frequency': 'twiceDaily',
-        'intakeTimes': [
-          {'hour': 13, 'minute': 0},
-          {'hour': 18, 'minute': 0},
-        ],
-        'startDate': Timestamp.fromDate(
-          DateTime.now().subtract(const Duration(days: 10)),
-        ),
-        'endDate': Timestamp.fromDate(
-          DateTime.now().add(const Duration(days: 20)),
-        ),
-        'remainingDoses': 30,
-        'remainingMedicationAmount': 30,
-        'notes': 'مع الطعام',
-        'status': 'active',
-      });
-
-      // 4. Generate Doses for Past 7 Days (30 taken, 4 missed, 1 pending)
-      final now = DateTime.now();
-
-      // Today's Doses
-      final todayDoses = [
-        {
-          'id': 'd_today_1',
-          'medId': 'med_aspirin',
-          'hour': 8,
-          'min': 0,
-          'status': 'taken',
-        },
-        {
-          'id': 'd_today_2',
-          'medId': 'med_metformin',
-          'hour': 13,
-          'min': 0,
-          'status': 'taken',
-        },
-        {
-          'id': 'd_today_3',
-          'medId': 'med_metformin',
-          'hour': 18,
-          'min': 0,
-          'status': 'missed',
-        },
-        {
-          'id': 'd_today_4',
-          'medId': 'med_aspirin',
-          'hour': 20,
-          'min': 0,
-          'status': 'pending',
-        },
-      ];
-
-      for (var d in todayDoses) {
-        final dRef = _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('doses')
-            .doc(d['id'] as String);
-        batch.set(dRef, {
-          'id': d['id'],
-          'medicationId': d['medId'],
-          'date': Timestamp.fromDate(DateTime(now.year, now.month, now.day)),
-          'time': {'hour': d['hour'], 'minute': d['min']},
-          'status': d['status'],
-        });
-      }
-
-      // Past Days Doses
-      int doseCounter = 5;
-      for (int i = 1; i <= 7; i++) {
-        final dayDate = now.subtract(Duration(days: i));
-        for (int h in [8, 13, 18, 20]) {
-          final medId = (h == 8 || h == 20) ? 'med_aspirin' : 'med_metformin';
-          final status = (doseCounter % 9 == 0) ? 'missed' : 'taken';
-          final doseId = 'd_past_$doseCounter';
-          doseCounter++;
-
-          final dRef = _firestore
-              .collection('users')
-              .doc(uid)
-              .collection('doses')
-              .doc(doseId);
-          batch.set(dRef, {
-            'id': doseId,
-            'medicationId': medId,
-            'date': Timestamp.fromDate(
-              DateTime(dayDate.year, dayDate.month, dayDate.day),
-            ),
-            'time': {'hour': h, 'minute': 0},
-            'status': status,
-          });
-        }
-      }
-
-      await batch.commit();
-    } catch (_) {}
-  }
 }
-//gfh
-//yhfajiihfcui

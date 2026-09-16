@@ -37,39 +37,74 @@ class ReportsBody extends StatelessWidget {
           );
         }
 
-        if (state is ReportsSuccess) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        if (state is ReportsError) {
+          return Center(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 1. Patient Header Card
-                _buildPatientCard(context, state),
-                const SizedBox(height: 16),
-
-                // 2. Filter Period Tabs (يومي, أسبوعي, شهري, سنوي)
-                _buildPeriodTabs(context, state.selectedPeriod),
-                const SizedBox(height: 16),
-
-                // 3. Stats Summary Card
-                _buildStatsCard(state.summary),
-                const SizedBox(height: 16),
-
-                // 4. Bar Chart Card (Dynamic for Daily, Weekly, Monthly, Yearly)
-                _buildWeeklyChartCard(
-                  chartData: state.chartData,
-                  chartLabels: state.chartLabels,
-                  headerTitle: state.chartHeaderTitle,
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text(
+                  (state).message,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
-
-                // 5. Today's Medications Header & List
-                _buildTodayMedicationsSection(state.todayMedications),
-                const SizedBox(height: 20),
-
-                // 6. Motivation Banner
-                _buildMotivationBanner(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    context.read<ReportsCubit>().loadReportsData();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المحاولة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF169B88),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ],
+            ),
+          );
+        }
+
+        if (state is ReportsSuccess) {
+          return RefreshIndicator(
+            onRefresh: () => context.read<ReportsCubit>().loadReportsData(),
+            color: const Color(0xFF169B88),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Column(
+                children: [
+                  // 1. Patient Header Card
+                  _buildPatientCard(context, state),
+                  const SizedBox(height: 16),
+
+                  // 2. Filter Period Tabs (يومي, أسبوعي, شهري, سنوي)
+                  _buildPeriodTabs(context, state.selectedPeriod),
+                  const SizedBox(height: 16),
+
+                  // 3. Stats Summary Card
+                  _buildStatsCard(state.summary),
+                  const SizedBox(height: 16),
+
+                  // 4. Bar Chart Card (Dynamic for Daily, Weekly, Monthly, Yearly)
+                  _buildWeeklyChartCard(
+                    chartData: state.chartData,
+                    chartLabels: state.chartLabels,
+                    headerTitle: state.chartHeaderTitle,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 5. Today's Medications Header & List
+                  _buildTodayMedicationsSection(state.todayMedications),
+                  const SizedBox(height: 20),
+
+                  // 6. Motivation Banner
+                  _buildMotivationBanner(),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         }
@@ -110,16 +145,19 @@ class ReportsBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(Icons.person_outline, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        'العمر: ${state.patientAge} سنة',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                  if (state.patientAge != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          'العمر: ${state.patientAge} سنة',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ],
@@ -146,7 +184,9 @@ class ReportsBody extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 3),
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF169B88) : const Color(0xFFEEF5FA),
+                color: isSelected
+                    ? const Color(0xFF169B88)
+                    : const Color(0xFFEEF5FA),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
@@ -154,8 +194,10 @@ class ReportsBody extends StatelessWidget {
                   period,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? Colors.white : const Color(0xFF1B363F),
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color:
+                        isSelected ? Colors.white : const Color(0xFF1B363F),
                   ),
                 ),
               ),
@@ -292,7 +334,8 @@ class ReportsBody extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              const Icon(Icons.calendar_today_outlined, size: 16, color: Color(0xFF169B88)),
+              const Icon(Icons.calendar_today_outlined,
+                  size: 16, color: Color(0xFF169B88)),
               const SizedBox(width: 6),
               Text(
                 headerTitle,
@@ -302,7 +345,8 @@ class ReportsBody extends StatelessWidget {
                   color: Color(0xFF169B88),
                 ),
               ),
-              const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF169B88)),
+              const Icon(Icons.keyboard_arrow_down,
+                  size: 18, color: Color(0xFF169B88)),
             ],
           ),
           const SizedBox(height: 20),
@@ -313,15 +357,20 @@ class ReportsBody extends StatelessWidget {
               Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('100%', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('100%',
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
                   SizedBox(height: 18),
-                  Text('75%', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('75%',
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
                   SizedBox(height: 18),
-                  Text('50%', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('50%',
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
                   SizedBox(height: 18),
-                  Text('25%', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('25%',
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
                   SizedBox(height: 18),
-                  Text('0%', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                  Text('0%',
+                      style: TextStyle(fontSize: 9, color: Colors.grey)),
                 ],
               ),
               const SizedBox(width: 8),
@@ -330,8 +379,11 @@ class ReportsBody extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(chartLabels.length, (index) {
-                    final heightRatio = index < chartData.length ? chartData[index] : 0.8;
+                  children:
+                      List.generate(chartLabels.length, (index) {
+                    final heightRatio = index < chartData.length
+                        ? chartData[index]
+                        : 0.0;
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -339,14 +391,17 @@ class ReportsBody extends StatelessWidget {
                           width: chartLabels.length > 6 ? 14 : 18,
                           height: 120 * heightRatio,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF169B88),
+                            color: heightRatio > 0
+                                ? const Color(0xFF169B88)
+                                : const Color(0xFFE0F2F1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           chartLabels[index],
-                          style: const TextStyle(fontSize: 9, color: Color(0xFF1B363F)),
+                          style: const TextStyle(
+                              fontSize: 9, color: Color(0xFF1B363F)),
                         ),
                       ],
                     );
@@ -361,7 +416,37 @@ class ReportsBody extends StatelessWidget {
   }
 
   // 5. Today's Medications Section Widget
-  Widget _buildTodayMedicationsSection(List<TodayMedicationReport> medications) {
+  Widget _buildTodayMedicationsSection(
+      List<TodayMedicationReport> medications) {
+    // Format today's date dynamically in Arabic
+    final now = DateTime.now();
+    final arabicDays = [
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+      'الأحد',
+    ];
+    final arabicMonths = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر',
+    ];
+    final dayName = arabicDays[now.weekday - 1];
+    final monthName = arabicMonths[now.month - 1];
+    final todayFormatted = '$dayName، ${now.day} $monthName';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -376,7 +461,8 @@ class ReportsBody extends StatelessWidget {
             children: [
               Row(
                 children: const [
-                  Icon(Icons.medication_outlined, color: Color(0xFF169B88), size: 24),
+                  Icon(Icons.medication_outlined,
+                      color: Color(0xFF169B88), size: 24),
                   SizedBox(width: 8),
                   Text(
                     'أدوية اليوم',
@@ -389,14 +475,14 @@ class ReportsBody extends StatelessWidget {
                 ],
               ),
               Row(
-                children: const [
-                  Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey),
-                  SizedBox(width: 4),
+                children: [
+                  const Icon(Icons.calendar_today_outlined,
+                      size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
                   Text(
-                    'السبت، 12 أبريل',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    todayFormatted,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
                 ],
               ),
             ],
@@ -411,7 +497,9 @@ class ReportsBody extends StatelessWidget {
                   ),
                 )
               : Column(
-                  children: medications.map((med) => _buildMedicationRow(med)).toList(),
+                  children: medications
+                      .map((med) => _buildMedicationRow(med))
+                      .toList(),
                 ),
         ],
       ),
@@ -455,7 +543,8 @@ class ReportsBody extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                const Icon(Icons.medication, color: Color(0xFF169B88), size: 22),
+                const Icon(Icons.medication,
+                    color: Color(0xFF169B88), size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -473,7 +562,8 @@ class ReportsBody extends StatelessWidget {
                       ),
                       Text(
                         med.dosage,
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -542,7 +632,8 @@ class ReportsBody extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.spa_outlined, color: Color(0xFF169B88), size: 28),
+              const Icon(Icons.spa_outlined,
+                  color: Color(0xFF169B88), size: 28),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,7 +661,8 @@ class ReportsBody extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.favorite_border, color: Color(0xFF169B88), size: 20),
+            child: const Icon(Icons.favorite_border,
+                color: Color(0xFF169B88), size: 20),
           ),
         ],
       ),
