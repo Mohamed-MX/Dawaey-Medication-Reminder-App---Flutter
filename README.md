@@ -3,9 +3,11 @@ A comprehensive Flutter application designed to help patients and caregivers tra
 
 ## 📱 Screenshots
  <tr>
-<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 4 27 34 PM" src="https://github.com/user-attachments/assets/009f3ebf-b87e-4780-aa4b-e68c7f073b33" />
-<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 6 52 16 PM" src="https://github.com/user-attachments/assets/48d54c13-85f1-45c4-9f4a-e04d8391657b" />
-<img width="250" height="550" alt="WhatsApp Image 2026-09-16 at 6 52 17 PM" src="https://github.com/user-attachments/assets/f27e7c9e-2513-4c1e-9153-a33d23ac8b63" />
+  <img width="780" height="420" alt="Gemini_Generated_Image_evkmf3evkmf3evkm" src="https://github.com/user-attachments/assets/c282f7d0-aeaf-4660-bd39-aae2921d7da3" />
+
+<img width="288 " height="624  " alt="WhatsApp Image 2026-09-16 at 4 27 34 PM" src="https://github.com/user-attachments/assets/009f3ebf-b87e-4780-aa4b-e68c7f073b33" />
+<img width="288 " height="624  " alt="WhatsApp Image 2026-09-16 at 6 52 16 PM" src="https://github.com/user-attachments/assets/48d54c13-85f1-45c4-9f4a-e04d8391657b" />
+<img width="288 " height="624  " alt="WhatsApp Image 2026-09-16 at 6 52 17 PM" src="https://github.com/user-attachments/assets/f27e7c9e-2513-4c1e-9153-a33d23ac8b63" />
 
 
 
