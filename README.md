@@ -92,3 +92,11 @@ graph TD
 *   `lib/Features/reports`: Logic and UI for adherence statistics and charts.
 *   `lib/Features/history`: Past records UI.
 *   `lib/core`: Shared utilities, themes, routing, and configurations.
+## 👥 Developers
+
+| Developer | GitHub |
+|-----------|--------|
+| Mohamed Medhat | [@Mohamed-MX](https://github.com/Mohamed-MX) |
+| Mohamed Amir | [@mohamedibraim](https://github.com/mohamedibraim) |
+| Omar Sewan | [@omarsa123](https://github.com/omarsa123) |
+| Ahmed Fathy | [@ahmedfathy44](https://github.com/ahmedfathy44) |
