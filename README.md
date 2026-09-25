@@ -94,9 +94,7 @@ graph TD
 *   `lib/core`: Shared utilities, themes, routing, and configurations.
 ## 👥 Developers
 
-| Developer | GitHub |
-|-----------|--------|
-| Mohamed Medhat | [@Mohamed-MX](https://github.com/Mohamed-MX) |
-| Mohamed Amir | [@mohamedibraim](https://github.com/mohamedibraim) |
-| Omar Sewan | [@omarsa123](https://github.com/omarsa123) |
-| Ahmed Fathy | [@ahmedfathy44](https://github.com/ahmedfathy44) |
+[Mohamed Medhat](https://github.com/Mohamed-MX), 
+[Mohamed Amir](https://github.com/mohamedibraim), 
+[Omar Sewan](https://github.com/omarsa123) ,
+[Ahmed Fathy](https://github.com/ahmedfathy44) 
